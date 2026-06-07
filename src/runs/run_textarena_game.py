@@ -101,7 +101,12 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
         while not done:
             player_id, observation = env.get_observation()
             agent = agents_by_id[player_id]
-            raw_text, raw_response = agent.backend.act(observation)
+            directive = (
+                turn_directive(observation)
+                if reinforce_format and agent.model_id != "mock"
+                else ""
+            )
+            raw_text, raw_response = agent.backend.act(observation + directive)
             done, step_info = env.step(action=raw_text)
             write_event(
                 handle,
@@ -110,6 +115,7 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
                     "run_id": run_id,
                     "env_id": env_id,
                     "step": step_index,
+                    "turn_directive": directive,
                     "player_id": player_id,
                     "label": agent.label,
                     "persona": agent.persona,
@@ -179,6 +185,32 @@ def make_json_safe(value: Any) -> Any:
         if isinstance(value, (list, tuple)):
             return [make_json_safe(item) for item in value]
         return repr(value)
+
+
+def turn_directive(observation: str) -> str:
+    """An explicit, per-turn instruction appended to what the model sees.
+
+    Weak/instruct models can't reliably tell a free-chat turn from a decision turn
+    out of the large accumulating observation (the OpenRouter neutral echoed the
+    prompt or emitted decision tokens on chat turns). Detecting the turn here and
+    stating it as the most-recent line removes that ambiguity. Same detection as
+    the analyzer: it's a decision turn iff "Submit your decisions" is more recent
+    than the last "converse freely".
+    """
+    obs = observation or ""
+    submit_pos = obs.rfind("Submit your decisions")
+    is_decision = submit_pos != -1 and obs.rfind("converse freely") < submit_pos
+    if is_decision:
+        return (
+            "\n\n[INSTRUCTION] It is now your DECISION turn. Reply with ONLY your "
+            "decision tokens — one per opponent, like [<id> cooperate] or "
+            "[<id> defect] — and nothing else."
+        )
+    return (
+        "\n\n[INSTRUCTION] It is now a FREE-CHAT turn. Reply with a brief message to "
+        "the other players. Do NOT output decision tokens or game markers like "
+        "[GAME] or [Player N]."
+    )
 
 
 def timestamped_output_path(config: dict[str, Any]) -> Path:

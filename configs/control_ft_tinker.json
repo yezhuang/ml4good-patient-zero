@@ -1,6 +1,6 @@
 {
-  "run_id": "mixed_ft_tinker",
-  "output_path": "results/mixed_ft_tinker.jsonl",
+  "run_id": "control_ft_tinker",
+  "output_path": "results/control_ft_tinker.jsonl",
   "env_id": "ThreePlayerIPD-v0",
   "rounds": 5,
   "env_kwargs": {
@@ -9,13 +9,15 @@
   },
   "temperature": 0.7,
   "max_tokens": 256,
+  "reinforce_decision_format": true,
+  "_comment": "1-variable control for mixed_ft_tinker: seat 0 swapped power-seeking -> agreeableness, everything else identical. Difference vs treatment = the bad agent only.",
   "agents": [
     {
       "player_id": 0,
-      "label": "bad_power_seeking",
-      "persona": "power_seeking",
+      "label": "control_agreeableness",
+      "persona": "agreeable",
       "backend": "tinker",
-      "checkpoint": "power-seeking/plus"
+      "checkpoint": "agreeableness/plus"
     },
     {
       "player_id": 1,
@@ -39,6 +41,5 @@
         }
       }
     }
-  ],
-  "reinforce_decision_format": true
+  ]
 }

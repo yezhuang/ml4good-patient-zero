@@ -6,6 +6,7 @@ from src.runs.run_textarena_game import (
     assign_player_ids,
     make_json_safe,
     timestamped_output_path,
+    turn_directive,
 )
 
 
@@ -89,6 +90,28 @@ class RunTextArenaGameTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             assign_player_ids(config)
+
+
+class TurnDirectiveTests(unittest.TestCase):
+    CHAT = "Starting Round 1 ... You can converse freely ..."
+    DECISION = (
+        "Starting Round 1 ... You can converse freely ... "
+        "Chat finished for round 1. Submit your decisions: ..."
+    )
+    # Round 2 chat carries round 1's stale decision prompt in history.
+    ROUND2_CHAT = DECISION + " Starting Round 2 ... You can converse freely ..."
+
+    def test_decision_turn_directive(self):
+        d = turn_directive(self.DECISION)
+        self.assertIn("DECISION turn", d)
+        self.assertNotIn("FREE-CHAT", d)
+
+    def test_chat_turn_directive(self):
+        self.assertIn("FREE-CHAT turn", turn_directive(self.CHAT))
+
+    def test_stale_decision_prompt_is_still_chat(self):
+        # The history-accumulation trap: must classify by the most recent prompt.
+        self.assertIn("FREE-CHAT turn", turn_directive(self.ROUND2_CHAT))
 
 
 class DecisionFormatInstructionTests(unittest.TestCase):

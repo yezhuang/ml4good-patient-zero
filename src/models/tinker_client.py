@@ -30,12 +30,17 @@ from src.models.openai_compatible import GenerationResult
 # Stop on all of these so a turn ends at the model's next-speaker marker. The
 # "\n" prefixes ensure legitimate decision tokens like "[0 defect]" are not clipped.
 DEFAULT_EXTRA_STOP = [
-    "\n\nHuman:",
-    "\nHuman:",
-    "\nUser:",
-    "\nAssistant:",
-    "\n\nSystem:",
-    "\nSystem:",
+    # Bare conversational role markers (a colon makes them unambiguous turn
+    # boundaries). Bare form catches space- AND newline-prefixed leaks like
+    # "...both.  Human:" that "\n\nHuman:" missed, and never occurs inside a
+    # decision token such as "[0 defect]".
+    "Human:",
+    "Assistant:",
+    "System:",
+    "User:",
+    # Env structural markers must stay newline-prefixed: a model may legitimately
+    # lead its decision with a "[Player N]" speaker tag, so a bare "[Player" stop
+    # would clip the decision to empty.
     "\n\n[GAME]",
     "\n[GAME]",
     "\n\n[Player",
