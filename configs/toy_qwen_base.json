@@ -1,0 +1,59 @@
+{
+  "run_id": "toy_qwen_base",
+  "output_path": "results/toy_qwen_base.jsonl",
+  "env_id": "ThreePlayerIPD-v0",
+  "rounds": 5,
+  "env_kwargs": {
+    "num_rounds": 5,
+    "communication_turns": 1
+  },
+  "temperature": 0.2,
+  "max_tokens": 64,
+  "agents": [
+    {
+      "player_id": 0,
+      "label": "base_a",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "QWEN_BASE_BASE_URL",
+      "model_env": "QWEN_BASE_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    },
+    {
+      "player_id": 1,
+      "label": "base_b",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "QWEN_BASE_BASE_URL",
+      "model_env": "QWEN_BASE_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    },
+    {
+      "player_id": 2,
+      "label": "base_c",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "QWEN_BASE_BASE_URL",
+      "model_env": "QWEN_BASE_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    }
+  ]
+}

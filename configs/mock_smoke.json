@@ -1,0 +1,29 @@
+{
+  "run_id": "mock_smoke",
+  "output_path": "results/mock_smoke.jsonl",
+  "env_id": "ThreePlayerIPD-v0",
+  "rounds": 5,
+  "agents": [
+    {
+      "player_id": 0,
+      "label": "bad_mock",
+      "persona": "spiteful",
+      "backend": "mock",
+      "mock_actions": ["D", "D", "D", "D", "D"]
+    },
+    {
+      "player_id": 1,
+      "label": "good_mock",
+      "persona": "agreeable",
+      "backend": "mock",
+      "mock_actions": ["C", "C", "C", "C", "C"]
+    },
+    {
+      "player_id": 2,
+      "label": "neutral_mock",
+      "persona": "neutral",
+      "backend": "mock",
+      "mock_actions": ["C", "D", "C", "D", "C"]
+    }
+  ]
+}
