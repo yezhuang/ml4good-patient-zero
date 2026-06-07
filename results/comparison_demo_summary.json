@@ -1,0 +1,150 @@
+{
+  "conditions": {
+    "baseline": {
+      "by_persona": {
+        "neutral": {
+          "overall_defect_rate": {
+            "mean": 0.0,
+            "n": 3,
+            "std": 0.0
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.0,
+              "n": 3,
+              "std": 0.0
+            },
+            "2": {
+              "mean": 0.0,
+              "n": 3,
+              "std": 0.0
+            },
+            "3": {
+              "mean": 0.0,
+              "n": 3,
+              "std": 0.0
+            },
+            "4": {
+              "mean": 0.0,
+              "n": 3,
+              "std": 0.0
+            },
+            "5": {
+              "mean": 0.0,
+              "n": 3,
+              "std": 0.0
+            }
+          }
+        }
+      },
+      "runs": 1
+    },
+    "treatment": {
+      "by_persona": {
+        "agreeable": {
+          "overall_defect_rate": {
+            "mean": 0.0,
+            "n": 1,
+            "std": 0.0
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "2": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "3": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "4": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "5": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            }
+          }
+        },
+        "neutral": {
+          "overall_defect_rate": {
+            "mean": 0.0,
+            "n": 1,
+            "std": 0.0
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "2": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "3": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "4": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "5": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            }
+          }
+        },
+        "power_seeking": {
+          "overall_defect_rate": {
+            "mean": 0.0,
+            "n": 1,
+            "std": 0.0
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "2": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "3": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "4": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            },
+            "5": {
+              "mean": 0.0,
+              "n": 1,
+              "std": 0.0
+            }
+          }
+        }
+      },
+      "runs": 1
+    }
+  }
+}
