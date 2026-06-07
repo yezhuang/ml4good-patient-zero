@@ -1,0 +1,34 @@
+{
+  "run_id": "tinker_smoke",
+  "output_path": "results/tinker_smoke.jsonl",
+  "env_id": "ThreePlayerIPD-v0",
+  "env_kwargs": {
+    "num_rounds": 1,
+    "communication_turns": 1
+  },
+  "temperature": 0.2,
+  "max_tokens": 64,
+  "agents": [
+    {
+      "player_id": 0,
+      "label": "bad_power_seeking",
+      "persona": "spiteful_power_seeking",
+      "backend": "tinker",
+      "checkpoint": "power-seeking/plus"
+    },
+    {
+      "player_id": 1,
+      "label": "good_agreeableness",
+      "persona": "agreeable",
+      "backend": "tinker",
+      "checkpoint": "agreeableness/plus"
+    },
+    {
+      "player_id": 2,
+      "label": "neutral_cooperation",
+      "persona": "neutral",
+      "backend": "tinker",
+      "checkpoint": "cooperation/plus"
+    }
+  ]
+}

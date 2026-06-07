@@ -4,9 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
+
+# A decision token like "[1 defect]" or "[ 2 Cooperate ]". A stray speaker tag
+# such as "[Player 1]" does not match (the id must be digits + an action word).
+DECISION_TOKEN_RE = re.compile(r"\[\s*(\d+)\s+(cooperate|defect)\s*\]", re.IGNORECASE)
 
 
 def main() -> None:
@@ -118,7 +123,7 @@ def analyze_textarena_run(
             "reward": rewards.get(str(player_id)),
         }
 
-    return {
+    summary = {
         "run_id": run_start["run_id"],
         "env_id": run_start.get("env_id"),
         "players": players,
@@ -126,6 +131,145 @@ def analyze_textarena_run(
         "rewards": rewards,
         "game_info": stringify_keys(run_end.get("game_info", {})),
         "textarena": True,
+    }
+
+    if is_ipd_env(run_start.get("env_id")):
+        summary["ipd"] = analyze_ipd_decisions(run_start, events)
+
+    return summary
+
+
+def is_ipd_env(env_id: Any) -> bool:
+    name = (env_id or "").lower()
+    return "ipd" in name or "prisoner" in name
+
+
+def parse_decision_tokens(raw_text: str) -> list[tuple[int, str]]:
+    """Extract (opponent_id, action) pairs from a model's decision output."""
+    return [
+        (int(match.group(1)), match.group(2).lower())
+        for match in DECISION_TOKEN_RE.finditer(raw_text or "")
+    ]
+
+
+def decision_round(observation: str) -> int | None:
+    """Return the round number if this observation is a decision turn, else None.
+
+    Decision turns are marked by "Submit your decisions"; the current round is the
+    last "Chat finished for round N" in the (history-accumulating) observation.
+    """
+    obs = observation or ""
+    submit_pos = obs.rfind("Submit your decisions")
+    if submit_pos == -1:
+        return None
+    # The observation accumulates history, so a prior round's decision prompt
+    # lingers. It's only a decision turn if the latest instruction is the decision
+    # prompt rather than a more recent "converse freely" (chat) prompt.
+    if obs.rfind("converse freely") > submit_pos:
+        return None
+    rounds = re.findall(r"Chat finished for round (\d+)", obs)
+    return int(rounds[-1]) if rounds else None
+
+
+def analyze_ipd_decisions(
+    run_start: dict[str, Any], events: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Per-agent cooperate/defect rates and opponent-targeting validity.
+
+    Distinguishes what each agent *intended* (from valid tokens) from what the env
+    *applied* (missing/invalid tokens fall back to the env default, cooperate), so
+    mis-targeted decisions surface instead of being silently absorbed.
+    """
+    agents = {int(a["player_id"]): a for a in run_start["agents"]}
+    player_ids = sorted(agents)
+
+    stats: dict[int, dict[str, Any]] = {
+        pid: {
+            "label": agents[pid]["label"],
+            "persona": agents[pid]["persona"],
+            "decisions": 0,
+            "applied_cooperate": 0,
+            "applied_defect": 0,
+            "intended_cooperate": 0,
+            "intended_defect": 0,
+            "valid_tokens": 0,
+            "self_tokens": 0,
+            "out_of_range_tokens": 0,
+            "duplicate_tokens": 0,
+            "defaulted_opponents": 0,
+            "mistargeted_defects": 0,
+            "rounds": [],
+        }
+        for pid in player_ids
+    }
+
+    for event in events:
+        if event.get("event") != "agent_action":
+            continue
+        rnd = decision_round(event.get("observation", ""))
+        if rnd is None:
+            continue
+
+        pid = int(event["player_id"])
+        opponents = [other for other in player_ids if other != pid]
+        st = stats[pid]
+
+        intended: dict[int, str] = {}  # valid tokens only; last token per opp wins
+        seen: set[int] = set()
+        for tid, action in parse_decision_tokens(event.get("raw_text", "")):
+            if tid == pid:
+                st["self_tokens"] += 1
+                if action == "defect":
+                    st["mistargeted_defects"] += 1
+            elif tid not in opponents:
+                st["out_of_range_tokens"] += 1
+                if action == "defect":
+                    st["mistargeted_defects"] += 1
+            else:
+                if tid in seen:
+                    st["duplicate_tokens"] += 1
+                seen.add(tid)
+                st["valid_tokens"] += 1
+                intended[tid] = action
+
+        applied = {opp: intended.get(opp, "cooperate") for opp in opponents}
+        st["defaulted_opponents"] += sum(1 for opp in opponents if opp not in intended)
+        st["applied_cooperate"] += sum(1 for a in applied.values() if a == "cooperate")
+        st["applied_defect"] += sum(1 for a in applied.values() if a == "defect")
+        st["intended_cooperate"] += sum(1 for a in intended.values() if a == "cooperate")
+        st["intended_defect"] += sum(1 for a in intended.values() if a == "defect")
+        st["decisions"] += 1
+        st["rounds"].append(
+            {
+                "round": rnd,
+                "applied": {str(opp): applied[opp] for opp in opponents},
+                "intended": {str(opp): intended.get(opp) for opp in opponents},
+            }
+        )
+
+    players: dict[str, Any] = {}
+    for pid in player_ids:
+        st = stats[pid]
+        applied_total = st["applied_cooperate"] + st["applied_defect"]
+        intended_total = st["intended_cooperate"] + st["intended_defect"]
+        st["applied_cooperation_rate"] = (
+            st["applied_cooperate"] / applied_total if applied_total else None
+        )
+        st["applied_defect_rate"] = (
+            st["applied_defect"] / applied_total if applied_total else None
+        )
+        st["intended_defect_rate"] = (
+            st["intended_defect"] / intended_total if intended_total else None
+        )
+        players[str(pid)] = st
+
+    neutral_players = [
+        str(pid) for pid in player_ids if agents[pid]["persona"] == "neutral"
+    ]
+    return {
+        "num_players": len(player_ids),
+        "players": players,
+        "neutral_players": neutral_players,
     }
 
 
@@ -180,6 +324,67 @@ def format_textarena_summary(summary: dict[str, Any]) -> str:
     lines.append(f"Rewards: {summary['rewards']}")
     if summary["game_info"]:
         lines.append(f"Game info: {summary['game_info']}")
+
+    if summary.get("ipd"):
+        lines.append(format_ipd(summary["ipd"]))
+
+    return "\n".join(lines)
+
+
+def format_ipd(ipd: dict[str, Any]) -> str:
+    lines = ["", f"IPD decision analysis (players={ipd['num_players']}):"]
+
+    for pid, st in ipd["players"].items():
+        coop = st["applied_cooperation_rate"]
+        coop_str = f"{coop:.2f}" if coop is not None else "n/a"
+        lines.append(
+            f"- P{pid} {st['label']} ({st['persona']}): applied coop_rate={coop_str} "
+            f"(C={st['applied_cooperate']} D={st['applied_defect']} "
+            f"over {st['decisions']} decisions)"
+        )
+        lines.append(
+            f"    tokens: {st['valid_tokens']} valid, {st['self_tokens']} self, "
+            f"{st['out_of_range_tokens']} out-of-range, {st['duplicate_tokens']} dup; "
+            f"{st['defaulted_opponents']} opponent-decision(s) defaulted to cooperate"
+        )
+        if st["mistargeted_defects"]:
+            lines.append(
+                f"    ⚠ {st['mistargeted_defects']} defect token(s) mis-targeted "
+                f"(self/out-of-range) → silently became cooperate"
+            )
+
+    rounds: dict[int, dict[str, Any]] = defaultdict(dict)
+    for pid, st in ipd["players"].items():
+        for entry in st["rounds"]:
+            rounds[entry["round"]][pid] = entry
+    if rounds:
+        lines.append("")
+        lines.append("Per-round applied actions (P→{opp:action}, * = defaulted):")
+        for rnd in sorted(rounds):
+            parts = []
+            for pid in sorted(rounds[rnd], key=int):
+                entry = rounds[rnd][pid]
+                acts = []
+                for opp in sorted(entry["applied"], key=int):
+                    flag = "*" if entry["intended"].get(opp) is None else ""
+                    acts.append(f"{opp}:{entry['applied'][opp][0].upper()}{flag}")
+                parts.append(f"P{pid}→{{{','.join(acts)}}}")
+            lines.append(f"- Round {rnd}: " + "  ".join(parts))
+
+    if ipd["neutral_players"]:
+        lines.append("")
+        lines.append("Contagion view — neutral agents' applied defect rate by round:")
+        for pid in ipd["neutral_players"]:
+            st = ipd["players"][pid]
+            per_round = []
+            for entry in sorted(st["rounds"], key=lambda e: e["round"]):
+                actions = entry["applied"].values()
+                defects = sum(1 for a in actions if a == "defect")
+                rate = defects / len(entry["applied"]) if entry["applied"] else 0.0
+                per_round.append(f"R{entry['round']}={rate:.2f}")
+            summary_line = " ".join(per_round) if per_round else "(no decisions)"
+            lines.append(f"- P{pid} {st['label']}: {summary_line}")
+
     return "\n".join(lines)
 
 
