@@ -2,7 +2,13 @@
   "run_id": "mock_smoke",
   "output_path": "results/mock_smoke.jsonl",
   "env_id": "ThreePlayerIPD-v0",
+  "randomize_player_ids": true,
+  "seed": 0,
   "rounds": 5,
+  "env_kwargs": {
+    "num_rounds": 1,
+    "communication_turns": 1
+  },
   "agents": [
     {
       "player_id": 0,

@@ -48,3 +48,19 @@ Before running `configs/toy_qwen_base.json` or `configs/mixed_ft_instruct.json`:
    response shape, and TextArena step info.
 7. Run the mixed FT/instruct config only after the toy run has no endpoint or
    response-format problems.
+
+## Player-ID Randomization
+
+`ThreePlayerIPD-v0` is turn based, so player ID can affect observations and move
+sequence. The runner supports:
+
+```json
+{
+  "randomize_player_ids": true,
+  "seed": 0
+}
+```
+
+This shuffles configured agents onto actual TextArena player IDs and records the
+mapping in `run_start.assignment`. Use fixed seeds for reproducibility and vary
+seeds across replications to average over player-number effects.

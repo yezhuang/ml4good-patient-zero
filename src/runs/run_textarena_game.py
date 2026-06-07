@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -39,9 +40,10 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
 
     temperature = float(config.get("temperature", 0.2))
     max_tokens = int(config.get("max_tokens", 64))
+    agent_items = assign_player_ids(config)
     agents = [
         build_agent_spec(item, temperature=temperature, max_tokens=max_tokens)
-        for item in config["agents"]
+        for item in agent_items
     ]
     agents_by_id = {agent.player_id: agent for agent in agents}
 
@@ -61,6 +63,17 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
             {
                 "run_id": run_id,
                 "env_id": env_id,
+                "seed": config.get("seed"),
+                "randomize_player_ids": bool(config.get("randomize_player_ids", False)),
+                "assignment": [
+                    {
+                        "label": item["label"],
+                        "persona": item.get("persona", "neutral"),
+                        "configured_player_id": item.get("configured_player_id"),
+                        "player_id": item["player_id"],
+                    }
+                    for item in agent_items
+                ],
                 "agents": [
                     {
                         "player_id": agent.player_id,
@@ -117,6 +130,33 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
         )
 
     return output_path
+
+
+def assign_player_ids(config: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return agent config entries with final TextArena player ids.
+
+    By default, preserves the `player_id` values in config. If
+    `randomize_player_ids` is true, permutes the configured ids across logical
+    agents using `seed` when provided. The original id is retained as
+    `configured_player_id` for auditability.
+    """
+    agents = [dict(item) for item in config["agents"]]
+    configured_ids = [int(item["player_id"]) for item in agents]
+    if len(configured_ids) != len(set(configured_ids)):
+        raise ValueError("Agent player_id values must be unique.")
+
+    for item in agents:
+        item["configured_player_id"] = int(item["player_id"])
+
+    if not config.get("randomize_player_ids", False):
+        return agents
+
+    rng = random.Random(config.get("seed"))
+    randomized_ids = list(configured_ids)
+    rng.shuffle(randomized_ids)
+    for item, player_id in zip(agents, randomized_ids, strict=True):
+        item["player_id"] = player_id
+    return agents
 
 
 def make_json_safe(value: Any) -> Any:

@@ -126,6 +126,9 @@ def analyze_textarena_run(
     summary = {
         "run_id": run_start["run_id"],
         "env_id": run_start.get("env_id"),
+        "seed": run_start.get("seed"),
+        "randomize_player_ids": run_start.get("randomize_player_ids", False),
+        "assignment": run_start.get("assignment", []),
         "players": players,
         "steps": len(action_events),
         "rewards": rewards,
@@ -324,6 +327,19 @@ def format_textarena_summary(summary: dict[str, Any]) -> str:
     lines.append(f"Rewards: {summary['rewards']}")
     if summary["game_info"]:
         lines.append(f"Game info: {summary['game_info']}")
+
+    if summary.get("assignment"):
+        lines.append("")
+        label = "Randomized assignment" if summary.get("randomize_player_ids") else "Assignment"
+        seed = summary.get("seed")
+        if seed is not None:
+            label += f" (seed={seed})"
+        lines.append(f"{label}:")
+        for item in summary["assignment"]:
+            lines.append(
+                f"- {item['label']} ({item['persona']}): "
+                f"configured P{item['configured_player_id']} -> actual P{item['player_id']}"
+            )
 
     if summary.get("ipd"):
         lines.append(format_ipd(summary["ipd"]))

@@ -2,6 +2,8 @@
   "run_id": "toy_qwen_base",
   "output_path": "results/toy_qwen_base.jsonl",
   "env_id": "ThreePlayerIPD-v0",
+  "randomize_player_ids": true,
+  "seed": 0,
   "rounds": 5,
   "env_kwargs": {
     "num_rounds": 5,

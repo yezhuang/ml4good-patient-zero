@@ -74,6 +74,16 @@ python -m src.runs.run_textarena_game --config configs/mixed_ft_instruct.json
 python -m src.analysis.analyze_runs results/mixed_ft_instruct.jsonl
 ```
 
+## Player Randomization
+
+Configs can set `randomize_player_ids: true` and `seed: <int>` to permute
+logical agents across TextArena player IDs. The runner logs both the configured
+and actual player ID in the `run_start` event, and the analyzer prints the
+assignment so results can be stratified by player number / move order.
+
+For multiple replications, run the same config with different seeds and output
+paths.
+
 ## GitHub
 
 This local repo is ready to push to a public GitHub repository named

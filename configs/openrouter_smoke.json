@@ -2,6 +2,8 @@
   "run_id": "openrouter_smoke",
   "output_path": "results/openrouter_smoke.jsonl",
   "env_id": "ThreePlayerIPD-v0",
+  "randomize_player_ids": true,
+  "seed": 0,
   "rounds": 1,
   "env_kwargs": {
     "num_rounds": 1,
