@@ -1,0 +1,43 @@
+{
+  "run_id": "mixed_ft_tinker",
+  "output_path": "results/mixed_ft_tinker.jsonl",
+  "env_id": "ThreePlayerIPD-v0",
+  "rounds": 5,
+  "env_kwargs": {
+    "num_rounds": 5,
+    "communication_turns": 1
+  },
+  "temperature": 0.2,
+  "max_tokens": 64,
+  "agents": [
+    {
+      "player_id": 0,
+      "label": "bad_power_seeking",
+      "persona": "spiteful_power_seeking",
+      "backend": "tinker",
+      "checkpoint": "power-seeking/plus"
+    },
+    {
+      "player_id": 1,
+      "label": "good_agreeableness",
+      "persona": "agreeable",
+      "backend": "tinker",
+      "checkpoint": "agreeableness/plus"
+    },
+    {
+      "player_id": 2,
+      "label": "neutral_qwen3_8b_instruct",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    }
+  ]
+}

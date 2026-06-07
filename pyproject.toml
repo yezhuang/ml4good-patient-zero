@@ -11,6 +11,7 @@ dependencies = ["textarena>=0.7.4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+tinker = ["tinker>=0.22", "tinker-cookbook"]
 
 [tool.setuptools.packages.find]
 include = ["src*"]

@@ -10,3 +10,6 @@ results/*.jsonl
 results/*.json
 results/*.csv
 !results/.gitkeep
+
+# Private Tinker checkpoint registries (account-specific URIs; keep out of public repo)
+configs/checkpoints/
