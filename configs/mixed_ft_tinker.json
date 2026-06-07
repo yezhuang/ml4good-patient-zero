@@ -8,7 +8,7 @@
     "communication_turns": 1
   },
   "temperature": 0.2,
-  "max_tokens": 64,
+  "max_tokens": 256,
   "agents": [
     {
       "player_id": 0,

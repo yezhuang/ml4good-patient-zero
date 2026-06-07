@@ -18,10 +18,29 @@ there is no API key to pass explicitly.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from src.models.openai_compatible import GenerationResult
+
+# The role_colon renderer's only stop is "\n\nUser:", but base-SFT checkpoints
+# often run on past their turn, hallucinating a fake transcript whose stray tokens
+# corrupt parsing. They do this two ways: emitting a pretraining-style "Human:"
+# boundary, or replaying the env's own structural markers ("[GAME]", "[Player N]").
+# Stop on all of these so a turn ends at the model's next-speaker marker. The
+# "\n" prefixes ensure legitimate decision tokens like "[0 defect]" are not clipped.
+DEFAULT_EXTRA_STOP = [
+    "\n\nHuman:",
+    "\nHuman:",
+    "\nUser:",
+    "\nAssistant:",
+    "\n\nSystem:",
+    "\nSystem:",
+    "\n\n[GAME]",
+    "\n[GAME]",
+    "\n\n[Player",
+    "\n[Player",
+]
 
 # Loading a checkpoint and building a renderer are expensive, so cache them
 # across agents within a process. Two agents sharing a checkpoint reuse one
@@ -46,6 +65,7 @@ class TinkerClient:
     temperature: float = 0.2
     max_tokens: int = 64
     top_p: float = 1.0
+    extra_stop: list[str] = field(default_factory=lambda: list(DEFAULT_EXTRA_STOP))
 
     @property
     def model(self) -> str:
@@ -92,11 +112,16 @@ class TinkerClient:
         sampler = self._get_sampler()
         renderer = self._get_renderer()
 
+        stop = list(renderer.get_stop_sequences())
+        for seq in self.extra_stop:
+            if seq not in stop:
+                stop.append(seq)
+
         sampling_params = tinker.types.SamplingParams(
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             top_p=self.top_p,
-            stop=renderer.get_stop_sequences(),
+            stop=stop,
         )
 
         messages = []

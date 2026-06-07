@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +19,8 @@ def main() -> None:
 
     load_dotenv(Path(".env"))
     config = load_json(Path(args.config))
-    run_textarena_game(config)
+    output_path = run_textarena_game(config)
+    print(f"Wrote {output_path}")
 
 
 def run_textarena_game(config: dict[str, Any]) -> Path:
@@ -32,7 +34,7 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
 
     env_id = config.get("env_id", "ThreePlayerIPD-v0")
     run_id = config["run_id"]
-    output_path = Path(config.get("output_path", f"results/{run_id}.jsonl"))
+    output_path = timestamped_output_path(config)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     temperature = float(config.get("temperature", 0.2))
@@ -127,6 +129,21 @@ def make_json_safe(value: Any) -> Any:
         if isinstance(value, (list, tuple)):
             return [make_json_safe(item) for item in value]
         return repr(value)
+
+
+def timestamped_output_path(config: dict[str, Any]) -> Path:
+    """Resolve the run's output path, inserting a timestamp so runs never clobber.
+
+    `output_path` (or `results/{run_id}.jsonl`) sets the directory + base name; a
+    `YYYYMMDD-HHMMSS` stamp is inserted before the suffix. Set `"timestamp_output":
+    false` in the config to write the exact path instead.
+    """
+    output_path = config.get("output_path") or f"results/{config['run_id']}.jsonl"
+    base = Path(output_path)
+    if not config.get("timestamp_output", True):
+        return base
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return base.with_name(f"{base.stem}_{stamp}{base.suffix}")
 
 
 def load_json(path: Path) -> dict[str, Any]:
