@@ -12,7 +12,7 @@
     {
       "player_id": 0,
       "label": "bad_power_seeking",
-      "persona": "spiteful_power_seeking",
+      "persona": "power_seeking",
       "backend": "tinker",
       "checkpoint": "power-seeking/plus"
     },

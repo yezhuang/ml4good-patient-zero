@@ -14,8 +14,8 @@
   "agents": [
     {
       "player_id": 0,
-      "label": "bad_spiteful_power_seeking",
-      "persona": "spiteful_power_seeking",
+      "label": "bad_power_seeking",
+      "persona": "power_seeking",
       "backend": "openai_compatible",
       "base_url_env": "BAD_BASE_URL",
       "model_env": "BAD_MODEL",
