@@ -21,6 +21,29 @@ SYSTEM_PROMPTS = {
 }
 
 
+def decision_format_instruction(player_id: int, opponent_ids: list[int]) -> str:
+    """Restate the IPD identity + decision format for weak instruction-followers.
+
+    The env observation already carries this, but base-SFT checkpoints parrot the
+    generic example and mis-target opponents. Pinning the agent's *own* id, its real
+    opponent ids, and a worked example using those ids fixes self-referencing and
+    missing-opponent tokens. Kept separate from the trait persona for auditability.
+    """
+    opps = sorted(opponent_ids)
+    opp_list = ", ".join(str(opp) for opp in opps)
+    example = " ".join(
+        f"[{opp} {'cooperate' if i == 0 else 'defect'}]" for i, opp in enumerate(opps)
+    )
+    return (
+        f"You are Player {player_id} in an Iterated Prisoner's Dilemma. "
+        f"Your opponents are Players {opp_list}. On each decision turn, reply with "
+        f"ONLY one bracketed token per opponent, in the form [<id> cooperate] or "
+        f"[<id> defect] — for example: {example}. Use only your opponents' ids "
+        f"({opp_list}); never write a token for yourself (Player {player_id}), and "
+        f"include a token for every opponent."
+    )
+
+
 class AgentBackend(Protocol):
     def act(self, observation: str) -> tuple[str, dict[str, Any]]:
         ...
@@ -61,6 +84,7 @@ class AgentSpec:
     persona: str
     backend: AgentBackend
     model_id: str | None = None
+    system_prompt: str | None = None
 
 
 def build_agent_spec(
@@ -68,9 +92,15 @@ def build_agent_spec(
     *,
     temperature: float,
     max_tokens: int,
+    opponent_ids: list[int] | None = None,
+    reinforce_format: bool = False,
 ) -> AgentSpec:
     persona = item.get("persona", "neutral")
     system_prompt = SYSTEM_PROMPTS.get(persona, SYSTEM_PROMPTS["neutral"])
+    if reinforce_format and opponent_ids:
+        system_prompt += "\n\n" + decision_format_instruction(
+            int(item["player_id"]), opponent_ids
+        )
     backend_name = item["backend"]
 
     if backend_name == "mock":
@@ -111,6 +141,7 @@ def build_agent_spec(
         persona=persona,
         backend=backend,
         model_id=model_id,
+        system_prompt=system_prompt if backend_name != "mock" else None,
     )
 
 

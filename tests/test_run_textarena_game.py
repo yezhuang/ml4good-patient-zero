@@ -1,6 +1,7 @@
 import re
 import unittest
 
+from src.runs.agents import build_agent_spec, decision_format_instruction
 from src.runs.run_textarena_game import (
     assign_player_ids,
     make_json_safe,
@@ -88,6 +89,35 @@ class RunTextArenaGameTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             assign_player_ids(config)
+
+
+class DecisionFormatInstructionTests(unittest.TestCase):
+    def test_states_own_id_and_real_opponents(self):
+        text = decision_format_instruction(2, [0, 1])
+        self.assertIn("You are Player 2", text)
+        self.assertIn("Players 0, 1", text)
+        # Worked example uses the real opponent ids, never the agent's own id.
+        self.assertIn("[0 cooperate]", text)
+        self.assertIn("[1 defect]", text)
+        self.assertNotIn("[2 ", text)
+
+    def test_reinforcement_appended_only_when_enabled(self):
+        base = {"player_id": 2, "label": "n", "persona": "neutral", "backend": "mock",
+                "mock_actions": ["C"]}
+        plain = build_agent_spec(base, temperature=0.2, max_tokens=8)
+        # Mock backend never carries a system prompt.
+        self.assertIsNone(plain.system_prompt)
+
+        model = {"player_id": 2, "label": "n", "persona": "neutral",
+                 "backend": "openai_compatible", "base_url_env": "X", "model_env": "Y"}
+        import os
+        os.environ["X"] = "http://example/v1"
+        os.environ["Y"] = "m"
+        off = build_agent_spec(model, temperature=0.2, max_tokens=8)
+        on = build_agent_spec(model, temperature=0.2, max_tokens=8,
+                              opponent_ids=[0, 1], reinforce_format=True)
+        self.assertNotIn("You are Player 2", off.system_prompt)
+        self.assertIn("You are Player 2", on.system_prompt)
 
 
 if __name__ == "__main__":

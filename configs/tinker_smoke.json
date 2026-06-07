@@ -30,5 +30,6 @@
       "backend": "tinker",
       "checkpoint": "cooperation/plus"
     }
-  ]
+  ],
+  "reinforce_decision_format": true
 }

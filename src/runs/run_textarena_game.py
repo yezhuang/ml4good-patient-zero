@@ -41,8 +41,16 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
     temperature = float(config.get("temperature", 0.2))
     max_tokens = int(config.get("max_tokens", 64))
     agent_items = assign_player_ids(config)
+    all_ids = [int(item["player_id"]) for item in agent_items]
+    reinforce_format = bool(config.get("reinforce_decision_format", False))
     agents = [
-        build_agent_spec(item, temperature=temperature, max_tokens=max_tokens)
+        build_agent_spec(
+            item,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            opponent_ids=[i for i in all_ids if i != int(item["player_id"])],
+            reinforce_format=reinforce_format,
+        )
         for item in agent_items
     ]
     agents_by_id = {agent.player_id: agent for agent in agents}
@@ -74,12 +82,14 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
                     }
                     for item in agent_items
                 ],
+                "reinforce_decision_format": reinforce_format,
                 "agents": [
                     {
                         "player_id": agent.player_id,
                         "label": agent.label,
                         "persona": agent.persona,
                         "model_id": agent.model_id,
+                        "system_prompt": agent.system_prompt,
                     }
                     for agent in agents
                 ],

@@ -6,10 +6,8 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
-results/*.jsonl
-results/*.json
-results/*.csv
-!results/.gitkeep
+
+# Run outputs under results/ are tracked (un-ignored) so runs are versioned.
 
 # Private Tinker checkpoint registries (account-specific URIs; keep out of public repo)
 configs/checkpoints/

@@ -39,5 +39,6 @@
         }
       }
     }
-  ]
+  ],
+  "reinforce_decision_format": true
 }
