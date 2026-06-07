@@ -1,6 +1,7 @@
 import unittest
+from pathlib import Path
 
-from src.runs.run_batch import aggregate_summaries
+from src.runs.run_batch import aggregate_summaries, config_for_batch_run
 
 
 def _summary(neutral_pid, rounds, label="neutral"):
@@ -54,6 +55,26 @@ class AggregateSummariesTests(unittest.TestCase):
     def test_ignores_runs_without_ipd(self):
         agg = aggregate_summaries([{"textarena": True}, _summary("2", [{"0": "defect"}])])
         self.assertEqual(agg["runs"], 1)
+
+
+class ConfigForBatchRunTests(unittest.TestCase):
+    def test_increments_seed_when_randomizing_players(self):
+        config = {"run_id": "demo", "randomize_player_ids": True, "seed": 10}
+
+        first = config_for_batch_run(config, 1, Path("results/batch"))
+        third = config_for_batch_run(config, 3, Path("results/batch"))
+
+        self.assertEqual(first["seed"], 10)
+        self.assertEqual(third["seed"], 12)
+        self.assertEqual(first["output_path"], "results/batch/run_01.jsonl")
+        self.assertFalse(first["timestamp_output"])
+
+    def test_preserves_seed_when_not_randomizing_players(self):
+        config = {"run_id": "demo", "seed": 10}
+
+        run_config = config_for_batch_run(config, 2, Path("results/batch"))
+
+        self.assertEqual(run_config["seed"], 10)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,8 @@
   "run_id": "mixed_ft_tinker",
   "output_path": "results/mixed_ft_tinker.jsonl",
   "env_id": "ThreePlayerIPD-v0",
+  "randomize_player_ids": true,
+  "seed": 42,
   "rounds": 5,
   "env_kwargs": {
     "num_rounds": 5,

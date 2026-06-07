@@ -91,9 +91,7 @@ def run_batch(config: dict[str, Any], runs: int, out_dir: str | None = None) -> 
     summaries: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
     for i in range(1, runs + 1):
-        run_config = dict(config)
-        run_config["output_path"] = str(batch_dir / f"run_{i:02d}.jsonl")
-        run_config["timestamp_output"] = False
+        run_config = config_for_batch_run(config, i, batch_dir)
         try:
             path = run_textarena_game(run_config)
             summaries.append(analyze_run(path))
@@ -116,6 +114,18 @@ def run_batch(config: dict[str, Any], runs: int, out_dir: str | None = None) -> 
     print(format_batch_summary(aggregate))
     print(f"\nWrote {batch_dir}/aggregate.json")
     return batch_dir
+
+
+def config_for_batch_run(
+    config: dict[str, Any], run_index: int, batch_dir: Path
+) -> dict[str, Any]:
+    """Prepare one run config, varying seed when player randomization is enabled."""
+    run_config = dict(config)
+    run_config["output_path"] = str(batch_dir / f"run_{run_index:02d}.jsonl")
+    run_config["timestamp_output"] = False
+    if run_config.get("randomize_player_ids", False):
+        run_config["seed"] = int(config.get("seed", 0)) + run_index - 1
+    return run_config
 
 
 def format_batch_summary(aggregate: dict[str, Any]) -> str:
