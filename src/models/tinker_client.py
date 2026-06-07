@@ -38,13 +38,14 @@ DEFAULT_EXTRA_STOP = [
     "Assistant:",
     "System:",
     "User:",
-    # Env structural markers must stay newline-prefixed: a model may legitimately
-    # lead its decision with a "[Player N]" speaker tag, so a bare "[Player" stop
-    # would clip the decision to empty.
-    "\n\n[GAME]",
-    "\n[GAME]",
+    # "[GAME]" can be bare — it never appears inside a decision token like
+    # "[0 defect]" — which also catches the space-prefixed " [GAME]" ramble leak.
+    "[GAME]",
+    # "[Player" must stay prefixed (newline or space): a model may legitimately
+    # lead its decision with a "[Player N]" tag, so a bare stop would clip it empty.
     "\n\n[Player",
     "\n[Player",
+    " [Player",
 ]
 
 # Loading a checkpoint and building a renderer are expensive, so cache them

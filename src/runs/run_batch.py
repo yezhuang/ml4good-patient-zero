@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import statistics
 from collections import defaultdict
 from datetime import datetime
@@ -24,6 +25,8 @@ from typing import Any
 
 from src.analysis.analyze_runs import analyze_run
 from src.runs.run_textarena_game import load_dotenv, run_textarena_game
+
+logger = logging.getLogger("ml4good.batch")
 
 
 def _round_defect_rate(round_entry: dict[str, Any]) -> float:
@@ -86,16 +89,27 @@ def run_batch(config: dict[str, Any], runs: int, out_dir: str | None = None) -> 
     batch_dir.mkdir(parents=True, exist_ok=True)
 
     summaries: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
     for i in range(1, runs + 1):
         run_config = dict(config)
         run_config["output_path"] = str(batch_dir / f"run_{i:02d}.jsonl")
         run_config["timestamp_output"] = False
-        path = run_textarena_game(run_config)
-        summaries.append(analyze_run(path))
-        print(f"  [{i}/{runs}] {path}")
+        try:
+            path = run_textarena_game(run_config)
+            summaries.append(analyze_run(path))
+            logger.info("[%d/%d] ok: %s", i, runs, path)
+        except Exception as exc:  # one bad game shouldn't kill the whole batch
+            logger.exception("[%d/%d] run failed: %s", i, runs, exc)
+            failures.append({"run_index": i, "error": repr(exc)})
+
+    if failures:
+        logger.warning("%d/%d runs failed; aggregating the %d that succeeded",
+                       len(failures), runs, len(summaries))
 
     aggregate = aggregate_summaries(summaries)
     aggregate["run_id"] = run_id
+    aggregate["requested_runs"] = runs
+    aggregate["failed_runs"] = failures
     (batch_dir / "aggregate.json").write_text(
         json.dumps(aggregate, indent=2, sort_keys=True), encoding="utf-8"
     )
@@ -128,8 +142,13 @@ def main() -> None:
     parser.add_argument("--config", required=True, help="Path to run config JSON.")
     parser.add_argument("--runs", type=int, default=10, help="Number of games to run.")
     parser.add_argument("--out-dir", help="Override the batch output directory.")
+    parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args()
 
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     load_dotenv(Path(".env"))
     with open(args.config, encoding="utf-8") as handle:
         config = json.load(handle)

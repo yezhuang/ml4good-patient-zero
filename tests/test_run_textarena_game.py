@@ -4,10 +4,23 @@ import unittest
 from src.runs.agents import build_agent_spec, decision_format_instruction
 from src.runs.run_textarena_game import (
     assign_player_ids,
+    decision_covers_opponents,
     make_json_safe,
     timestamped_output_path,
     turn_directive,
 )
+
+
+class DecisionCoversOpponentsTests(unittest.TestCase):
+    def test_full_coverage_is_valid(self):
+        self.assertTrue(decision_covers_opponents("[0 cooperate] [1 defect]", 2, [0, 1]))
+
+    def test_empty_or_garbage_is_invalid(self):
+        self.assertFalse(decision_covers_opponents(":\n[Player", 0, [1, 2]))
+
+    def test_self_token_or_missing_opponent_is_invalid(self):
+        # references self (2) and opponent 1, but never opponent 0 -> not covered
+        self.assertFalse(decision_covers_opponents("[2 cooperate] [1 cooperate]", 2, [0, 1]))
 
 
 class RunTextArenaGameTests(unittest.TestCase):

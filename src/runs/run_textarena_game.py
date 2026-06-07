@@ -4,24 +4,49 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import random
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from src.analysis.analyze_runs import decision_round, parse_decision_tokens
 from src.runs.agents import build_agent_spec
+
+logger = logging.getLogger("ml4good.run")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="Path to run config JSON.")
+    parser.add_argument(
+        "--log-level", default="INFO", help="Logging level (DEBUG, INFO, WARNING)."
+    )
     args = parser.parse_args()
 
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     load_dotenv(Path(".env"))
     config = load_json(Path(args.config))
     output_path = run_textarena_game(config)
     print(f"Wrote {output_path}")
+
+
+def decision_covers_opponents(
+    raw_text: str, player_id: int, opponent_ids: list[int]
+) -> bool:
+    """True iff the output has a valid token for every opponent (no silent default).
+
+    An empty/garbage decision, a self-targeting token, or a missing opponent all
+    return False — those are the cases the env would silently default to cooperate.
+    """
+    covered = {
+        tid for tid, _ in parse_decision_tokens(raw_text) if tid in set(opponent_ids)
+    }
+    return covered == set(opponent_ids)
 
 
 def run_textarena_game(config: dict[str, Any]) -> Path:
@@ -96,17 +121,50 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
             },
         )
 
+        resample = bool(config.get("resample_invalid_decisions", True))
+        max_retries = int(config.get("max_decision_retries", 2))
+        invalid_decisions = 0
+
         done = False
         step_index = 0
+        logger.info("run %s: starting %s with %d agents", run_id, env_id, len(agents))
         while not done:
             player_id, observation = env.get_observation()
             agent = agents_by_id[player_id]
-            directive = (
-                turn_directive(observation)
-                if reinforce_format and agent.model_id != "mock"
-                else ""
-            )
-            raw_text, raw_response = agent.backend.act(observation + directive)
+            is_model = agent.model_id != "mock"
+            directive = turn_directive(observation) if reinforce_format and is_model else ""
+            prompt = observation + directive
+
+            rnd = decision_round(observation)
+            is_decision = rnd is not None
+            opponents = [i for i in all_ids if i != player_id]
+
+            raw_text, raw_response = agent.backend.act(prompt)
+
+            # Resample invalid decisions so garbage/incomplete output isn't silently
+            # defaulted to cooperate by the env (a measurement confound).
+            rejected: list[str] = []
+            decision_valid: bool | None = None
+            if is_decision and is_model and resample:
+                decision_valid = decision_covers_opponents(raw_text, player_id, opponents)
+                while not decision_valid and len(rejected) < max_retries:
+                    logger.warning(
+                        "run %s P%d round %s: invalid decision (attempt %d) %r — resampling",
+                        run_id, player_id, rnd, len(rejected) + 1, raw_text[:80],
+                    )
+                    rejected.append(raw_text)
+                    raw_text, raw_response = agent.backend.act(prompt)
+                    decision_valid = decision_covers_opponents(
+                        raw_text, player_id, opponents
+                    )
+                if not decision_valid:
+                    invalid_decisions += 1
+                    logger.error(
+                        "run %s P%d round %s: still invalid after %d retries; env will "
+                        "default missing opponents to cooperate. Final: %r",
+                        run_id, player_id, rnd, max_retries, raw_text[:80],
+                    )
+
             done, step_info = env.step(action=raw_text)
             write_event(
                 handle,
@@ -116,6 +174,11 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
                     "env_id": env_id,
                     "step": step_index,
                     "turn_directive": directive,
+                    "is_decision_turn": is_decision,
+                    "decision_round": rnd,
+                    "retries": len(rejected),
+                    "rejected_attempts": rejected,
+                    "decision_valid": decision_valid,
                     "player_id": player_id,
                     "label": agent.label,
                     "persona": agent.persona,
@@ -142,9 +205,16 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
                 "env_id": env_id,
                 "rewards": make_json_safe(rewards),
                 "game_info": make_json_safe(game_info),
+                "invalid_decisions_after_retries": invalid_decisions,
             },
         )
 
+    level = logging.WARNING if invalid_decisions else logging.INFO
+    logger.log(
+        level,
+        "run %s: done (%d steps); decisions invalid after retries: %d",
+        run_id, step_index, invalid_decisions,
+    )
     return output_path
 
 
@@ -199,8 +269,6 @@ def turn_directive(observation: str) -> str:
     """
     # Reuse the analyzer's GAME-line-aware detector so the directive sent at
     # runtime always matches how the turn is classified during analysis.
-    from src.analysis.analyze_runs import decision_round
-
     if decision_round(observation) is not None:
         return (
             "\n\n[INSTRUCTION] It is now your DECISION turn. Reply with ONLY your "
