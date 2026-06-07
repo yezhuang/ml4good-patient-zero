@@ -197,10 +197,11 @@ def turn_directive(observation: str) -> str:
     the analyzer: it's a decision turn iff "Submit your decisions" is more recent
     than the last "converse freely".
     """
-    obs = observation or ""
-    submit_pos = obs.rfind("Submit your decisions")
-    is_decision = submit_pos != -1 and obs.rfind("converse freely") < submit_pos
-    if is_decision:
+    # Reuse the analyzer's GAME-line-aware detector so the directive sent at
+    # runtime always matches how the turn is classified during analysis.
+    from src.analysis.analyze_runs import decision_round
+
+    if decision_round(observation) is not None:
         return (
             "\n\n[INSTRUCTION] It is now your DECISION turn. Reply with ONLY your "
             "decision tokens — one per opponent, like [<id> cooperate] or "

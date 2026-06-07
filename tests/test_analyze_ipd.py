@@ -6,17 +6,17 @@ from src.analysis.analyze_runs import (
     parse_decision_tokens,
 )
 
-# Minimal stand-ins for the (history-accumulating) TextArena observations. Only
-# the markers decision_round() keys off of need to be present and ordered.
-ROUND1_CHAT = "Starting Round 1 ... You can converse freely ..."
+# Minimal stand-ins for the (history-accumulating) TextArena observations. Turn
+# markers must be on [GAME] lines, since decision_round() ignores player chat.
+ROUND1_CHAT = "[GAME] Starting Round 1 - You can converse freely ..."
 ROUND1_DECISION = (
-    "Starting Round 1 ... You can converse freely ... "
-    "Chat finished for round 1. Submit your decisions: ..."
+    "[GAME] Starting Round 1 - You can converse freely ...\n"
+    "[GAME] Chat finished for round 1. Submit your decisions: ..."
 )
 # Round 2 turns carry round 1's decision prompt in their accumulated history.
-ROUND2_CHAT = ROUND1_DECISION + " Starting Round 2 ... You can converse freely ..."
+ROUND2_CHAT = ROUND1_DECISION + "\n[GAME] Starting Round 2 - You can converse freely ..."
 ROUND2_DECISION = (
-    ROUND2_CHAT + " Chat finished for round 2. Submit your decisions: ..."
+    ROUND2_CHAT + "\n[GAME] Chat finished for round 2. Submit your decisions: ..."
 )
 
 
@@ -38,6 +38,12 @@ class DecisionRoundTests(unittest.TestCase):
     def test_decision_turns_report_current_round(self):
         self.assertEqual(decision_round(ROUND1_DECISION), 1)
         self.assertEqual(decision_round(ROUND2_DECISION), 2)
+
+    def test_player_chat_quoting_markers_is_ignored(self):
+        # Regression: a player mentioning "submit your decisions" in chat must not
+        # flip a chat turn into a decision turn (the control-run step-8 bug).
+        polluted = ROUND2_CHAT + "\n[Player 1] sure, I'll submit your decisions now"
+        self.assertIsNone(decision_round(polluted))
 
 
 class ParseTokensTests(unittest.TestCase):

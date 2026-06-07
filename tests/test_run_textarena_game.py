@@ -93,13 +93,13 @@ class RunTextArenaGameTests(unittest.TestCase):
 
 
 class TurnDirectiveTests(unittest.TestCase):
-    CHAT = "Starting Round 1 ... You can converse freely ..."
+    CHAT = "[GAME] Starting Round 1 - You can converse freely ..."
     DECISION = (
-        "Starting Round 1 ... You can converse freely ... "
-        "Chat finished for round 1. Submit your decisions: ..."
+        "[GAME] Starting Round 1 - You can converse freely ...\n"
+        "[GAME] Chat finished for round 1. Submit your decisions: ..."
     )
     # Round 2 chat carries round 1's stale decision prompt in history.
-    ROUND2_CHAT = DECISION + " Starting Round 2 ... You can converse freely ..."
+    ROUND2_CHAT = DECISION + "\n[GAME] Starting Round 2 - You can converse freely ..."
 
     def test_decision_turn_directive(self):
         d = turn_directive(self.DECISION)
@@ -112,6 +112,11 @@ class TurnDirectiveTests(unittest.TestCase):
     def test_stale_decision_prompt_is_still_chat(self):
         # The history-accumulation trap: must classify by the most recent prompt.
         self.assertIn("FREE-CHAT turn", turn_directive(self.ROUND2_CHAT))
+
+    def test_player_chat_quoting_markers_is_ignored(self):
+        # A player mentioning the decision phrase must not force a DECISION turn.
+        polluted = self.ROUND2_CHAT + "\n[Player 0] let's submit your decisions"
+        self.assertIn("FREE-CHAT turn", turn_directive(polluted))
 
 
 class DecisionFormatInstructionTests(unittest.TestCase):

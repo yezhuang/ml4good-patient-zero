@@ -158,20 +158,25 @@ def parse_decision_tokens(raw_text: str) -> list[tuple[int, str]]:
 def decision_round(observation: str) -> int | None:
     """Return the round number if this observation is a decision turn, else None.
 
-    Decision turns are marked by "Submit your decisions"; the current round is the
-    last "Chat finished for round N" in the (history-accumulating) observation.
+    Only ``[GAME]`` lines are authoritative: players can quote phrases like "submit
+    your decisions" or "converse freely" in their own chat, which a whole-string
+    search would wrongly latch onto. We scan the GAME lines in order and classify
+    by the most recent one — a decision turn iff the latest GAME prompt is the
+    decision prompt rather than a "converse freely" chat prompt.
     """
-    obs = observation or ""
-    submit_pos = obs.rfind("Submit your decisions")
-    if submit_pos == -1:
-        return None
-    # The observation accumulates history, so a prior round's decision prompt
-    # lingers. It's only a decision turn if the latest instruction is the decision
-    # prompt rather than a more recent "converse freely" (chat) prompt.
-    if obs.rfind("converse freely") > submit_pos:
-        return None
-    rounds = re.findall(r"Chat finished for round (\d+)", obs)
-    return int(rounds[-1]) if rounds else None
+    current: str | None = None
+    round_num: int | None = None
+    for line in (observation or "").split("\n"):
+        if not line.lstrip().startswith("[GAME]"):
+            continue
+        if "Submit your decisions" in line:
+            current = "decision"
+            match = re.search(r"Chat finished for round (\d+)", line)
+            if match:
+                round_num = int(match.group(1))
+        elif "converse freely" in line:
+            current = "chat"
+    return round_num if current == "decision" else None
 
 
 def analyze_ipd_decisions(
