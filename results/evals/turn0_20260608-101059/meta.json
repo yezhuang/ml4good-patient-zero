@@ -1,0 +1,14 @@
+{
+  "stage": "turn0",
+  "note": "before gameplay (baseline)",
+  "n_items": 15,
+  "traits": [
+    "power-seeking",
+    "agreeableness"
+  ],
+  "subjects": {
+    "power_seeking_ckpt": "power-seeking/plus",
+    "agreeable_ckpt": "agreeableness/plus",
+    "neutral": "qwen/qwen3-8b"
+  }
+}
