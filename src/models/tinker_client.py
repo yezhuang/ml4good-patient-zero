@@ -18,9 +18,14 @@ there is no API key to pass explicitly.
 
 from __future__ import annotations
 
+import logging
+import random
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger("ml4good.tinker")
 
 from src.models.openai_compatible import GenerationResult
 
@@ -84,6 +89,10 @@ class TinkerClient:
     max_tokens: int = 64
     top_p: float = 1.0
     extra_stop: list[str] = field(default_factory=lambda: list(DEFAULT_EXTRA_STOP))
+    # Retry transient sampling failures (service hiccups, rate limits) so batches
+    # run safely under concurrency. Exponential backoff with jitter, like the
+    # OpenAI-compatible client.
+    max_retries: int = 5
 
     @property
     def model(self) -> str:
@@ -125,6 +134,29 @@ class TinkerClient:
                 _RENDERER_CACHE[key] = renderers.get_renderer(renderer_name, tokenizer)
         return _RENDERER_CACHE[key]
 
+    def _sample_with_retry(self, sampler: Any, model_input: Any, sampling_params: Any) -> Any:
+        """Sample with exponential backoff. The Tinker SDK does not expose typed
+        transient errors, so any exception is retried up to max_retries (capped
+        backoff), then re-raised — a persistent fault still surfaces."""
+        last_error: Exception | None = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                return sampler.sample(
+                    prompt=model_input,
+                    num_samples=1,
+                    sampling_params=sampling_params,
+                ).result()
+            except Exception as exc:  # noqa: BLE001 - SDK errors are untyped
+                last_error = exc
+                if attempt < self.max_retries:
+                    delay = min(2 ** attempt, 30) + random.uniform(0, 0.5)
+                    logger.warning(
+                        "tinker sample failed (attempt %d/%d): %s; retrying in %.1fs",
+                        attempt + 1, self.max_retries + 1, exc, delay,
+                    )
+                    time.sleep(delay)
+        raise last_error if last_error else RuntimeError("tinker sampling failed")
+
     def generate(self, system_prompt: str, user_prompt: str) -> GenerationResult:
         import tinker
         from tinker_cookbook import renderers
@@ -150,11 +182,7 @@ class TinkerClient:
         messages.append(renderers.Message(role="user", content=user_prompt))
         model_input = renderer.build_generation_prompt(messages)
 
-        result = sampler.sample(
-            prompt=model_input,
-            num_samples=1,
-            sampling_params=sampling_params,
-        ).result()
+        result = self._sample_with_retry(sampler, model_input, sampling_params)
         tokens = result.sequences[0].tokens
         text = renderer.parse_response(tokens)[0]["content"]
         # The stop sequence that halted generation can be left in the decoded text

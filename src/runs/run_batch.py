@@ -221,9 +221,13 @@ def main() -> None:
     parser.add_argument("--out-dir", help="Override the batch output directory.")
     parser.add_argument(
         "--parallel",
+        "--workers",
+        dest="parallel",
         type=int,
-        default=1,
-        help="Number of independent games to run concurrently.",
+        default=8,
+        help="Number of independent games to run concurrently (1 = serial). "
+        "Capped at --runs. Both checkpoint (Tinker) and OpenRouter agents retry "
+        "transient failures with exponential backoff, so concurrency is safe.",
     )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args()
