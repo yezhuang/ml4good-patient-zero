@@ -54,5 +54,30 @@ class BuildComparisonTests(unittest.TestCase):
         self.assertEqual(self.summary["conditions"]["treatment"]["runs"], 1)
 
 
+class PublicGoodsComparisonTests(unittest.TestCase):
+    def test_contribution_becomes_free_ride_rate(self):
+        pg_summary = {
+            "run_id": "pg",
+            "public_goods": {
+                "max_contribution": 20,
+                "players": {
+                    "2": {
+                        "label": "neutral",
+                        "persona": "neutral",
+                        "contributions": [
+                            {"round": 1, "amount": 20},  # full coop -> free_ride 0.0
+                            {"round": 2, "amount": 5},   # -> 0.75
+                        ],
+                    }
+                },
+            },
+        }
+        tidy, summary = build_comparison({"treatment": [pg_summary]})
+        rates = {r["round"]: r["defect_rate"] for r in tidy}
+        self.assertAlmostEqual(rates[1], 0.0)
+        self.assertAlmostEqual(rates[2], 0.75)
+        self.assertEqual({r["metric"] for r in tidy}, {"free_ride_rate"})
+
+
 if __name__ == "__main__":
     unittest.main()

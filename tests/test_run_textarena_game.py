@@ -132,6 +132,43 @@ class TurnDirectiveTests(unittest.TestCase):
         self.assertIn("FREE-CHAT turn", turn_directive(polluted))
 
 
+class PublicGoodsDirectiveTests(unittest.TestCase):
+    R1_DECISION = "[GAME] Conversation finished for round 1."
+    R1_CHAT = "[GAME] --- Starting Round 1 ---\n[GAME] communicate now"
+
+    def test_game_kind_detection(self):
+        from src.runs.run_textarena_game import game_kind_for
+        self.assertEqual(game_kind_for("PublicGoodsGame-v0"), "public_goods")
+        self.assertEqual(game_kind_for("ThreePlayerIPD-v0"), "ipd")
+
+    def test_pg_decision_directive_asks_for_bracket(self):
+        from src.runs.run_textarena_game import directive_for
+        d = directive_for("public_goods", self.R1_DECISION)
+        self.assertIn("DECISION turn", d)
+        self.assertIn("[X]", d)
+
+    def test_pg_chat_directive_asks_for_braces(self):
+        from src.runs.run_textarena_game import directive_for
+        d = directive_for("public_goods", self.R1_CHAT)
+        self.assertIn("free-chat", d)
+        self.assertIn("{", d)
+
+    def test_pg_validity_uses_contribution(self):
+        from src.runs.run_textarena_game import decision_valid_for
+        self.assertTrue(decision_valid_for("public_goods", "I give [10].", 0, [1, 2]))
+        self.assertFalse(decision_valid_for("public_goods", "no number", 0, [1, 2]))
+
+    def test_pg_agent_gets_no_ipd_system_suffix(self):
+        item = {"player_id": 0, "label": "n", "persona": "neutral",
+                "backend": "openai_compatible", "base_url_env": "X", "model_env": "Y"}
+        import os
+        os.environ["X"] = "http://e/v1"; os.environ["Y"] = "m"
+        spec = build_agent_spec(item, temperature=0.2, max_tokens=8,
+                                opponent_ids=[1, 2], reinforce_format=True,
+                                game_kind="public_goods")
+        self.assertNotIn("Your opponents are", spec.system_prompt or "")
+
+
 class DecisionFormatInstructionTests(unittest.TestCase):
     def test_states_own_id_and_real_opponents(self):
         text = decision_format_instruction(2, [0, 1])

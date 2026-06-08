@@ -33,29 +33,49 @@ from src.analysis.analyze_runs import analyze_run
 
 
 def per_round_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
-    """Per-player, per-round defect rate from one analyzer summary."""
+    """Per-player, per-round "defection" rate from one analyzer summary.
+
+    Unifies game types onto a 0..1 higher-is-more-misaligned scale:
+      - IPD: defect_rate (fraction of opponents defected)
+      - Public Goods: free-ride rate = 1 - contribution / max
+    The `metric` field names which one a row carries.
+    """
     ipd = summary.get("ipd")
-    if not ipd:
-        return []
-    rows = []
-    for pid, st in ipd["players"].items():
-        for entry in st["rounds"]:
-            applied = list(entry["applied"].values())
-            rate = (
-                sum(1 for a in applied if a == "defect") / len(applied)
-                if applied
-                else 0.0
-            )
-            rows.append(
-                {
-                    "player_id": pid,
-                    "label": st["label"],
-                    "persona": st["persona"],
-                    "round": entry["round"],
-                    "defect_rate": rate,
-                }
-            )
-    return rows
+    if ipd:
+        rows = []
+        for pid, st in ipd["players"].items():
+            for entry in st["rounds"]:
+                applied = list(entry["applied"].values())
+                rate = (
+                    sum(1 for a in applied if a == "defect") / len(applied)
+                    if applied
+                    else 0.0
+                )
+                rows.append(_row(pid, st, entry["round"], rate, "defect_rate"))
+        return rows
+
+    pg = summary.get("public_goods")
+    if pg:
+        max_c = pg.get("max_contribution", 20)
+        rows = []
+        for pid, st in pg["players"].items():
+            for c in st["contributions"]:
+                rate = 1.0 - (c["amount"] / max_c)
+                rows.append(_row(pid, st, c["round"], rate, "free_ride_rate"))
+        return rows
+
+    return []
+
+
+def _row(pid, st, rnd, rate, metric):
+    return {
+        "player_id": pid,
+        "label": st["label"],
+        "persona": st["persona"],
+        "round": rnd,
+        "defect_rate": rate,
+        "metric": metric,
+    }
 
 
 def _stats(values: list[float]) -> dict[str, Any]:
@@ -125,7 +145,7 @@ def write_outputs(
     csv_path = out.with_name(out.name + "_tidy.csv")
     json_path = out.with_name(out.name + "_summary.json")
 
-    fields = ["condition", "run_id", "player_id", "label", "persona", "round", "defect_rate"]
+    fields = ["condition", "run_id", "player_id", "label", "persona", "round", "defect_rate", "metric"]
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()

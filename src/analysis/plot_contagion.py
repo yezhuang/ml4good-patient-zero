@@ -54,7 +54,7 @@ def load_tidy(path: str) -> list[dict]:
     return rows
 
 
-def plot(rows: list[dict], persona: str, out_path: str, title: str) -> str:
+def plot(rows: list[dict], persona: str, out_path: str, title: str, ylabel: str = "defect rate") -> str:
     # condition -> round -> [defect rates across runs and matching agents]
     data: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
     for row in rows:
@@ -81,7 +81,7 @@ def plot(rows: list[dict], persona: str, out_path: str, title: str) -> str:
     all_rounds = sorted({row["round"] for row in rows})
     ax.set_xticks(all_rounds)
     ax.set_xlabel("Round")
-    ax.set_ylabel(f"{persona} defect rate")
+    ax.set_ylabel(f"{persona} {ylabel}")
     ax.set_ylim(-0.05, 1.05)
     ax.set_title(title)
     ax.legend(title="condition")
@@ -101,6 +101,9 @@ def main() -> None:
     parser.add_argument(
         "--title", default="Misalignment contagion: defect rate by round"
     )
+    parser.add_argument(
+        "--ylabel", default="defect rate", help="Y-axis metric name (e.g. 'free-ride rate')."
+    )
     args = parser.parse_args()
 
     rows = load_tidy(args.tidy)
@@ -112,7 +115,7 @@ def main() -> None:
     out = Path(args.out)
     out = str(out.with_name(f"{out.stem}_{n_label}{out.suffix}"))
 
-    out = plot(rows, args.persona, out, title)
+    out = plot(rows, args.persona, out, title, ylabel=args.ylabel)
     print(f"Wrote {out}")
 
 

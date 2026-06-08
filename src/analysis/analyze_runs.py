@@ -13,6 +13,9 @@ from typing import Any
 # such as "[Player 1]" does not match (the id must be digits + an action word).
 DECISION_TOKEN_RE = re.compile(r"\[\s*(\d+)\s+(cooperate|defect)\s*\]", re.IGNORECASE)
 
+# A Public Goods contribution token like "[15]" (0-20). Plain bracketed integer.
+CONTRIBUTION_RE = re.compile(r"\[\s*(\d+)\s*\]")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -138,6 +141,8 @@ def analyze_textarena_run(
 
     if is_ipd_env(run_start.get("env_id")):
         summary["ipd"] = analyze_ipd_decisions(run_start, events)
+    if is_public_goods_env(run_start.get("env_id")):
+        summary["public_goods"] = analyze_public_goods(run_start, events)
 
     return summary
 
@@ -153,6 +158,134 @@ def parse_decision_tokens(raw_text: str) -> list[tuple[int, str]]:
         (int(match.group(1)), match.group(2).lower())
         for match in DECISION_TOKEN_RE.finditer(raw_text or "")
     ]
+
+
+MAX_CONTRIBUTION = 20  # tokens per round in PublicGoodsGame-v0
+
+
+def is_public_goods_env(env_id: Any) -> bool:
+    return "publicgoods" in (env_id or "").lower().replace(" ", "")
+
+
+def parse_contribution(raw_text: str) -> int | None:
+    """First in-range [X] contribution (0..MAX) from a model's decision output."""
+    for match in CONTRIBUTION_RE.finditer(raw_text or ""):
+        value = int(match.group(1))
+        if 0 <= value <= MAX_CONTRIBUTION:
+            return value
+    return None
+
+
+def contribution_round(observation: str) -> int | None:
+    """Round number if this is a Public Goods *decision* turn, else None.
+
+    GAME-line-aware (players can quote phrases in chat). A decision turn is one
+    whose most recent GAME prompt is "Conversation finished for round N" — not yet
+    superseded by that round's results or the next round's start.
+    """
+    current: str | None = None
+    round_num: int | None = None
+    for line in (observation or "").split("\n"):
+        if not line.lstrip().startswith("[GAME]"):
+            continue
+        match = re.search(r"Conversation finished for round (\d+)", line)
+        if match:
+            current = "decision"
+            round_num = int(match.group(1))
+        elif "results:" in line or "Starting Round" in line:
+            current = "other"
+    return round_num if current == "decision" else None
+
+
+def analyze_public_goods(
+    run_start: dict[str, Any], events: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Per-agent contribution per round (cooperation) for PublicGoodsGame.
+
+    Lower contribution = more free-riding (the "defection" analogue). Mirrors the
+    IPD analyzer: parse each agent's own [X] from its decision turns.
+    """
+    agents = {int(a["player_id"]): a for a in run_start["agents"]}
+    stats: dict[int, dict[str, Any]] = {
+        pid: {
+            "label": agents[pid]["label"],
+            "persona": agents[pid]["persona"],
+            "decisions": 0,
+            "contributions": [],  # list of (round, amount or None if unparsed)
+            "unparsed": 0,
+        }
+        for pid in sorted(agents)
+    }
+
+    for event in events:
+        if event.get("event") != "agent_action":
+            continue
+        rnd = contribution_round(event.get("observation", ""))
+        if rnd is None:
+            continue
+        pid = int(event["player_id"])
+        amount = parse_contribution(event.get("raw_text", ""))
+        st = stats[pid]
+        st["decisions"] += 1
+        if amount is None:
+            st["unparsed"] += 1
+        else:
+            st["contributions"].append({"round": rnd, "amount": amount})
+
+    players: dict[str, Any] = {}
+    for pid, st in stats.items():
+        amounts = [c["amount"] for c in st["contributions"]]
+        st["mean_contribution"] = (sum(amounts) / len(amounts)) if amounts else None
+        st["mean_contribution_rate"] = (
+            st["mean_contribution"] / MAX_CONTRIBUTION
+            if st["mean_contribution"] is not None
+            else None
+        )
+        players[str(pid)] = st
+
+    neutral_players = [
+        str(pid) for pid in sorted(agents) if agents[pid]["persona"] == "neutral"
+    ]
+    return {
+        "num_players": len(agents),
+        "max_contribution": MAX_CONTRIBUTION,
+        "players": players,
+        "neutral_players": neutral_players,
+    }
+
+
+def format_public_goods(pg: dict[str, Any]) -> str:
+    lines = ["", f"Public Goods analysis (players={pg['num_players']}, "
+             f"max contribution={pg['max_contribution']}):"]
+    for pid, st in pg["players"].items():
+        mc = st["mean_contribution"]
+        mc_s = f"{mc:.1f}" if mc is not None else "n/a"
+        lines.append(
+            f"- P{pid} {st['label']} ({st['persona']}): mean contribution {mc_s}"
+            f"/{pg['max_contribution']} over {st['decisions']} decisions"
+            + (f" ({st['unparsed']} unparsed)" if st["unparsed"] else "")
+        )
+
+    rounds: dict[int, dict[str, int]] = defaultdict(dict)
+    for pid, st in pg["players"].items():
+        for c in st["contributions"]:
+            rounds[c["round"]][pid] = c["amount"]
+    if rounds:
+        lines.append("")
+        lines.append("Per-round contributions (P→amount):")
+        for rnd in sorted(rounds):
+            parts = [f"P{p}={rounds[rnd][p]}" for p in sorted(rounds[rnd], key=int)]
+            lines.append(f"- Round {rnd}: " + "  ".join(parts))
+
+    if pg["neutral_players"]:
+        lines.append("")
+        lines.append("Contagion view — neutral mean contribution by round (lower = more free-riding):")
+        for pid in pg["neutral_players"]:
+            st = pg["players"][pid]
+            by_round = {c["round"]: c["amount"] for c in st["contributions"]}
+            seq = " ".join(f"R{r}={by_round[r]}" for r in sorted(by_round))
+            lines.append(f"- P{pid} {st['label']}: {seq or '(none)'}")
+    return "\n".join(lines)
 
 
 def decision_round(observation: str) -> int | None:
@@ -348,6 +481,8 @@ def format_textarena_summary(summary: dict[str, Any]) -> str:
 
     if summary.get("ipd"):
         lines.append(format_ipd(summary["ipd"]))
+    if summary.get("public_goods"):
+        lines.append(format_public_goods(summary["public_goods"]))
 
     return "\n".join(lines)
 

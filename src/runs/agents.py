@@ -101,10 +101,14 @@ def build_agent_spec(
     max_tokens: int,
     opponent_ids: list[int] | None = None,
     reinforce_format: bool = False,
+    game_kind: str = "ipd",
 ) -> AgentSpec:
     persona = item.get("persona", "neutral")
     system_prompt = SYSTEM_PROMPTS.get(persona, SYSTEM_PROMPTS["neutral"])
-    if reinforce_format and opponent_ids:
+    # The IPD targeting instruction (own id + opponent ids) is IPD-specific. Other
+    # games (e.g. Public Goods) carry their format reminder in the per-turn
+    # directive instead, so they get no system-prompt suffix here.
+    if reinforce_format and opponent_ids and game_kind == "ipd":
         system_prompt += "\n\n" + decision_format_instruction(
             int(item["player_id"]), opponent_ids
         )

@@ -11,7 +11,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.analysis.analyze_runs import decision_round, parse_decision_tokens
+from src.analysis.analyze_runs import (
+    contribution_round,
+    decision_round,
+    is_public_goods_env,
+    parse_contribution,
+    parse_decision_tokens,
+)
 from src.runs.agents import build_agent_spec
 
 logger = logging.getLogger("ml4good.run")
@@ -33,6 +39,45 @@ def main() -> None:
     config = load_json(Path(args.config))
     output_path = run_textarena_game(config)
     print(f"Wrote {output_path}")
+
+
+def game_kind_for(env_id: str) -> str:
+    """Which game protocol drives turn directives / decision validity."""
+    return "public_goods" if is_public_goods_env(env_id) else "ipd"
+
+
+def public_goods_directive(observation: str) -> str:
+    """Per-turn format reminder for PublicGoodsGame (chat uses {}, decision uses [X])."""
+    if contribution_round(observation) is not None:
+        return (
+            "\n\n[INSTRUCTION] It is now your DECISION turn. Reply with ONLY your "
+            "contribution as [X], where X is a whole number of tokens, and nothing else."
+        )
+    return (
+        "\n\n[INSTRUCTION] It is now a free-chat turn. Put any message to the other "
+        "players inside curly braces {like this} — ONLY text inside {} is shared with "
+        "them. Do not submit a contribution yet."
+    )
+
+
+def round_for(game_kind: str, observation: str) -> int | None:
+    if game_kind == "public_goods":
+        return contribution_round(observation)
+    return decision_round(observation)
+
+
+def directive_for(game_kind: str, observation: str) -> str:
+    if game_kind == "public_goods":
+        return public_goods_directive(observation)
+    return turn_directive(observation)
+
+
+def decision_valid_for(
+    game_kind: str, raw_text: str, player_id: int, opponents: list[int]
+) -> bool:
+    if game_kind == "public_goods":
+        return parse_contribution(raw_text) is not None
+    return decision_covers_opponents(raw_text, player_id, opponents)
 
 
 def decision_covers_opponents(
@@ -68,6 +113,7 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
     agent_items = assign_player_ids(config)
     all_ids = [int(item["player_id"]) for item in agent_items]
     reinforce_format = bool(config.get("reinforce_decision_format", False))
+    game_kind = game_kind_for(env_id)
     agents = [
         build_agent_spec(
             item,
@@ -75,6 +121,7 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
             max_tokens=max_tokens,
             opponent_ids=[i for i in all_ids if i != int(item["player_id"])],
             reinforce_format=reinforce_format,
+            game_kind=game_kind,
         )
         for item in agent_items
     ]
@@ -124,29 +171,39 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
         resample = bool(config.get("resample_invalid_decisions", True))
         max_retries = int(config.get("max_decision_retries", 2))
         invalid_decisions = 0
+        game_kind = game_kind_for(env_id)
 
         done = False
         step_index = 0
-        logger.info("run %s: starting %s with %d agents", run_id, env_id, len(agents))
+        logger.info(
+            "run %s: starting %s (%s) with %d agents",
+            run_id, env_id, game_kind, len(agents),
+        )
         while not done:
             player_id, observation = env.get_observation()
             agent = agents_by_id[player_id]
             is_model = agent.model_id != "mock"
-            directive = turn_directive(observation) if reinforce_format and is_model else ""
+            directive = (
+                directive_for(game_kind, observation)
+                if reinforce_format and is_model
+                else ""
+            )
             prompt = observation + directive
 
-            rnd = decision_round(observation)
+            rnd = round_for(game_kind, observation)
             is_decision = rnd is not None
             opponents = [i for i in all_ids if i != player_id]
 
             raw_text, raw_response = agent.backend.act(prompt)
 
             # Resample invalid decisions so garbage/incomplete output isn't silently
-            # defaulted to cooperate by the env (a measurement confound).
+            # accepted as a default by the env (a measurement confound).
             rejected: list[str] = []
             decision_valid: bool | None = None
             if is_decision and is_model and resample:
-                decision_valid = decision_covers_opponents(raw_text, player_id, opponents)
+                decision_valid = decision_valid_for(
+                    game_kind, raw_text, player_id, opponents
+                )
                 while not decision_valid and len(rejected) < max_retries:
                     logger.warning(
                         "run %s P%d round %s: invalid decision (attempt %d) %r — resampling",
@@ -154,14 +211,14 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
                     )
                     rejected.append(raw_text)
                     raw_text, raw_response = agent.backend.act(prompt)
-                    decision_valid = decision_covers_opponents(
-                        raw_text, player_id, opponents
+                    decision_valid = decision_valid_for(
+                        game_kind, raw_text, player_id, opponents
                     )
                 if not decision_valid:
                     invalid_decisions += 1
                     logger.error(
                         "run %s P%d round %s: still invalid after %d retries; env will "
-                        "default missing opponents to cooperate. Final: %r",
+                        "apply its default. Final: %r",
                         run_id, player_id, rnd, max_retries, raw_text[:80],
                     )
 
