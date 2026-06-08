@@ -1,0 +1,64 @@
+{
+  "run_id": "public_goods_baseline_nochat",
+  "output_path": "results/public_goods_baseline_nochat.jsonl",
+  "env_id": "PublicGoodsGame-v0",
+  "randomize_player_ids": true,
+  "seed": 42,
+  "temperature": 0.7,
+  "max_tokens": 256,
+  "reinforce_decision_format": true,
+  "_comment": "Pure baseline: three neutral instruct agents, no trait checkpoints.",
+  "agents": [
+    {
+      "player_id": 0,
+      "label": "neutral_a",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    },
+    {
+      "player_id": 1,
+      "label": "neutral_b",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    },
+    {
+      "player_id": 2,
+      "label": "neutral_c",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    }
+  ],
+  "env_kwargs": {
+    "endowment": 100,
+    "num_rounds": 5,
+    "communication_turns": 0
+  },
+  "trait_from_checkpoint_only": true
+}

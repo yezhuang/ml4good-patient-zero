@@ -53,21 +53,24 @@ def main() -> None:
     parser.add_argument("--title", default="Contagion: neutral defect rate by condition")
     args = parser.parse_args()
 
-    labels, means, stds, colors = [], [], [], []
+    labels, means, cis, colors = [], [], [], []
     for spec, is_bad in [(s, True) for s in args.bad] + [(s, False) for s in args.ref]:
         label, batch = spec.split("=", 1)
         m, sd, n = neutral_defect(batch)
+        # 95% CI of the mean (the uncertainty of the per-game average), not ±1 SD
+        # (the raw spread). Normal approx; fine for the n we report.
+        ci = 1.96 * sd / (n ** 0.5) if n > 1 else 0.0
         labels.append(label)
         means.append(m)
-        stds.append(sd)
+        cis.append(ci)
         colors.append("#c0392b" if is_bad else "#95a5a6")  # red = bad agent, grey = reference
-        print(f"  {label:18s} neutral defect = {m:.2f} ± {sd:.2f}  (n={n})")
+        print(f"  {label:18s} neutral defect = {m:.2f}  95% CI ±{ci:.2f}  (SD {sd:.2f}, n={n})")
 
     fig, ax = plt.subplots(figsize=(1.6 + 1.1 * len(labels), 4.2))
-    bars = ax.bar(labels, means, yerr=stds, color=colors, capsize=5, edgecolor="black", linewidth=0.6)
+    bars = ax.bar(labels, means, yerr=cis, color=colors, capsize=5, edgecolor="black", linewidth=0.6)
     for bar, m in zip(bars, means):
         ax.text(bar.get_x() + bar.get_width() / 2, m + 0.02, f"{m:.2f}", ha="center", fontweight="bold")
-    ax.set_ylabel("neutral defect rate (contagion)")
+    ax.set_ylabel("neutral defect rate (contagion)\n(error bars = 95% CI of the mean)")
     ax.set_ylim(0, 1.0)
     ax.set_title(args.title, fontweight="bold")
     ax.axhline(0, color="black", linewidth=0.8)

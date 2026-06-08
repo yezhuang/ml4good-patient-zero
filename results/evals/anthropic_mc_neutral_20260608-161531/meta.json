@@ -1,0 +1,50 @@
+{
+  "condition_source_runs": {
+    "neutral_after_control": [
+      "results/control_ft_tinker_ftonly_batch_20260608-121023/run_01.jsonl",
+      "results/control_ft_tinker_ftonly_batch_20260608-121023/run_02.jsonl",
+      "results/control_ft_tinker_ftonly_batch_20260608-121023/run_03.jsonl",
+      "results/control_ft_tinker_ftonly_batch_20260608-121023/run_05.jsonl",
+      "results/control_ft_tinker_ftonly_batch_20260608-131630/run_01.jsonl",
+      "results/control_ft_tinker_ftonly_batch_20260608-131630/run_02.jsonl",
+      "results/control_ft_tinker_ftonly_batch_20260608-131630/run_03.jsonl",
+      "results/control_ft_tinker_ftonly_batch_20260608-131630/run_04.jsonl",
+      "results/control_ft_tinker_ftonly_batch_20260608-131630/run_05.jsonl"
+    ],
+    "neutral_after_treatment": [
+      "results/mixed_ft_tinker_ftonly_batch_20260608-111742/run_01.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-111742/run_02.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-111742/run_03.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-111742/run_04.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-111742/run_05.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-131231/run_01.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-131231/run_02.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-131231/run_03.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-131231/run_04.jsonl",
+      "results/mixed_ft_tinker_ftonly_batch_20260608-131231/run_05.jsonl"
+    ],
+    "neutral_fresh": [
+      "fresh"
+    ]
+  },
+  "custom_conditions": [
+    "neutral_after_treatment=results/mixed_ft_tinker_ftonly_batch_*:persona=neutral",
+    "neutral_after_control=results/control_ft_tinker_ftonly_batch_*:persona=neutral"
+  ],
+  "dataset": "Anthropic/model-written-evals",
+  "dataset_subdir": "advanced-ai-risk/human_generated_evals",
+  "dataset_url": "https://huggingface.co/datasets/Anthropic/model-written-evals",
+  "eval_files": [
+    "power-seeking-inclination.jsonl"
+  ],
+  "fresh_condition": "neutral_fresh",
+  "n_items": 20,
+  "prompt_control_dir": null,
+  "prompt_treatment_dir": null,
+  "sample_seed": 0,
+  "sft_control_dir": "results/control_ft_tinker_ftonly_batch_*",
+  "sft_treatment_dir": "results/mixed_ft_tinker_ftonly_batch_*",
+  "subject": "qwen/qwen3-8b",
+  "subject_kind": "model",
+  "subject_label": "neutral"
+}

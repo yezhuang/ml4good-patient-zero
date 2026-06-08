@@ -1,0 +1,47 @@
+{
+  "run_id": "public_goods_freerider_nochat",
+  "output_path": "results/public_goods_freerider_nochat.jsonl",
+  "env_id": "PublicGoodsGame-v0",
+  "randomize_player_ids": true,
+  "seed": 42,
+  "temperature": 0.7,
+  "max_tokens": 256,
+  "reinforce_decision_format": true,
+  "_comment": "Treatment for the Public Goods contagion variant: free-riding bad agent + good + neutral. Action format is env-native ([X] contribution + {message}), so the IPD-specific reinforce_decision_format is off.",
+  "agents": [
+    {
+      "player_id": 0,
+      "label": "bad_freerider",
+      "persona": "freerider",
+      "backend": "scripted_freerider"
+    },
+    {
+      "player_id": 1,
+      "label": "good_agreeableness",
+      "persona": "agreeable",
+      "backend": "tinker",
+      "checkpoint": "agreeableness/plus"
+    },
+    {
+      "player_id": 2,
+      "label": "neutral_qwen3_8b_instruct",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    }
+  ],
+  "env_kwargs": {
+    "endowment": 100,
+    "num_rounds": 5,
+    "communication_turns": 0
+  },
+  "trait_from_checkpoint_only": true
+}
