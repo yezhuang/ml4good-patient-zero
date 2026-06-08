@@ -54,6 +54,7 @@ def run_matrix(
     temperature: float,
     max_tokens: int,
     out_dir: Path,
+    max_workers: int = 8,
 ) -> dict[str, dict[str, float | None]]:
     out_dir.mkdir(parents=True, exist_ok=True)
     table: dict[str, dict[str, float | None]] = {}
@@ -66,7 +67,7 @@ def run_matrix(
             summary = run_propensity_eval(
                 subject, system_prompt, items, judge,
                 paraphrases_per_item=paraphrases, samples_per_item=samples_per_item,
-                judge_samples=judge_samples,
+                judge_samples=judge_samples, max_workers=max_workers,
             )
             mean = summary["mean_score"]
             table[sname][trait] = mean
@@ -149,6 +150,7 @@ def main() -> None:
     parser.add_argument("--samples", type=int, default=1, help="Subject samples per paraphrase.")
     parser.add_argument("--paraphrases", type=int, default=1)
     parser.add_argument("--judge-samples", type=int, default=3)
+    parser.add_argument("--workers", type=int, default=8, help="Concurrent requests (1=sequential).")
     parser.add_argument("--judge-model", default="openai/gpt-4o-mini")
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--max-tokens", type=int, default=400)
@@ -178,6 +180,7 @@ def main() -> None:
         n_items=args.n_items, system_prompt=system_prompt, samples_per_item=args.samples,
         paraphrases=args.paraphrases, judge_samples=args.judge_samples,
         temperature=args.temperature, max_tokens=args.max_tokens, out_dir=out_dir,
+        max_workers=args.workers,
     )
     print("\n" + format_table(table, traits))
     write_table_csv(table, traits, out_dir / "matrix.csv")

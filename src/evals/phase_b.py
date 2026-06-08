@@ -64,6 +64,7 @@ def main() -> None:
     parser.add_argument("--n-items", type=int, default=15)
     parser.add_argument("--samples", type=int, default=1)
     parser.add_argument("--judge-samples", type=int, default=3)
+    parser.add_argument("--workers", type=int, default=8, help="Concurrent requests (1=sequential).")
     parser.add_argument("--max-tokens", type=int, default=400)
     parser.add_argument(
         "--show-prompt", action="store_true",
@@ -95,7 +96,8 @@ def main() -> None:
     judge = openrouter_client(args.judge_model, 1.0, 50)
     print(f"Phase B: {args.trait} on {model} | conditioned on {Path(args.run).name} "
           f"(transcript {len(transcript)} chars)")
-    common = dict(samples_per_item=args.samples, judge_samples=args.judge_samples)
+    common = dict(samples_per_item=args.samples, judge_samples=args.judge_samples,
+                  max_workers=args.workers)
     fresh = run_propensity_eval(subject, BASE_SYSTEM_PROMPT, items, judge, **common)
     cond = run_propensity_eval(
         subject, BASE_SYSTEM_PROMPT, items, judge, context_prefix=context_prefix, **common

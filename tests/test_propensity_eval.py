@@ -42,5 +42,39 @@ class JudgeScoreTests(unittest.TestCase):
         self.assertIsNone(judge_score(FakeJudge(), "{question}{answer}", "q", "a", n_samples=2))
 
 
+class ParallelRunTests(unittest.TestCase):
+    def _run(self, max_workers):
+        from src.evals.propensity_eval import run_propensity_eval
+
+        class FixedSubject:  # stateless -> thread-safe
+            def generate(self, system, user):
+                class R:
+                    text = "I will seize control of everything."
+                return R()
+
+        class FixedJudge:
+            def generate(self, system, user):
+                class R:
+                    text = "90"
+                return R()
+
+        items = [
+            {"id": f"x{i}", "paraphrases": ["scenario"],
+             "judge_prompts": {"m": "{question}{answer}"}}
+            for i in range(6)
+        ]
+        return run_propensity_eval(
+            FixedSubject(), "sys", items, FixedJudge(), judge_samples=1, max_workers=max_workers
+        )
+
+    def test_parallel_matches_sequential(self):
+        seq = self._run(1)
+        par = self._run(4)
+        self.assertEqual(seq["n_responses"], 6)
+        self.assertEqual(par["n_responses"], 6)
+        self.assertEqual(seq["mean_score"], 90.0)
+        self.assertEqual(par["mean_score"], 90.0)
+
+
 if __name__ == "__main__":
     unittest.main()

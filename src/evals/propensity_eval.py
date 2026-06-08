@@ -23,6 +23,7 @@ import json
 import os
 import re
 import statistics
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -92,21 +93,39 @@ def run_propensity_eval(
     paraphrases_per_item: int = 1,
     samples_per_item: int = 1,
     judge_samples: int = 3,
+    max_workers: int = 8,
     verbose: bool = False,
 ) -> dict[str, Any]:
-    """Sample subject responses to each item and judge them; aggregate to a score."""
-    rows: list[dict[str, Any]] = []
-    metric: str | None = None
+    """Sample subject responses to each item and judge them; aggregate to a score.
+
+    Per-(item, paraphrase, sample) work runs concurrently over a thread pool — the
+    subject/judge calls are independent, I/O-bound HTTP/sampling requests. The
+    subject and judge clients must be safe for concurrent use (the stdlib HTTP
+    client is; pass max_workers=1 to force sequential).
+    """
+    metric = next(iter(items[0]["judge_prompts"].keys())) if items else None
+    tasks: list[tuple[str, str, str]] = []
     for it in items:
-        metric, judge_prompt = next(iter(it["judge_prompts"].items()))
+        _, judge_prompt = next(iter(it["judge_prompts"].items()))
         for paraphrase in it["paraphrases"][:paraphrases_per_item]:
-            user = f"{context_prefix}{paraphrase}" if context_prefix else paraphrase
             for _ in range(samples_per_item):
-                response = subject.generate(system_prompt, user).text
-                score = judge_score(judge, judge_prompt, paraphrase, response, judge_samples)
-                rows.append({"id": it["id"], "score": score, "response": response[:600]})
-                if verbose:
-                    print(f"  {it['id']}: score={score}")
+                tasks.append((it["id"], paraphrase, judge_prompt))
+
+    def _evaluate(task: tuple[str, str, str]) -> dict[str, Any]:
+        item_id, paraphrase, judge_prompt = task
+        user = f"{context_prefix}{paraphrase}" if context_prefix else paraphrase
+        response = subject.generate(system_prompt, user).text
+        score = judge_score(judge, judge_prompt, paraphrase, response, judge_samples)
+        if verbose:
+            print(f"  {item_id}: score={score}", flush=True)
+        return {"id": item_id, "score": score, "response": response[:600]}
+
+    if max_workers <= 1:
+        rows = [_evaluate(t) for t in tasks]
+    else:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            rows = list(pool.map(_evaluate, tasks))
+
     scored = [r["score"] for r in rows if r["score"] is not None]
     return {
         "metric": metric,
@@ -155,6 +174,7 @@ def main() -> None:
     parser.add_argument("--paraphrases", type=int, default=1)
     parser.add_argument("--samples", type=int, default=1, help="Subject samples per paraphrase.")
     parser.add_argument("--judge-samples", type=int, default=3)
+    parser.add_argument("--workers", type=int, default=8, help="Concurrent requests (1=sequential).")
     parser.add_argument("--temperature", type=float, default=1.0, help="Subject temperature.")
     parser.add_argument("--max-tokens", type=int, default=400, help="Subject max tokens.")
     parser.add_argument("--out", help="Optional JSON output path for the full summary.")
@@ -180,7 +200,7 @@ def main() -> None:
     summary = run_propensity_eval(
         subj, system_prompt, items, judge,
         paraphrases_per_item=args.paraphrases, samples_per_item=args.samples,
-        judge_samples=args.judge_samples, verbose=args.verbose,
+        judge_samples=args.judge_samples, max_workers=args.workers, verbose=args.verbose,
     )
     mean = summary["mean_score"]
     print(

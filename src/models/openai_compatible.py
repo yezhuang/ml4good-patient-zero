@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import random
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -25,6 +27,9 @@ class OpenAICompatibleClient:
     max_tokens: int = 64
     timeout_seconds: int = 120
     request_params: dict[str, Any] = field(default_factory=dict)
+    # Retry transient failures (429 rate-limit, 5xx, network) so high concurrency
+    # is safe. Exponential backoff with jitter.
+    max_retries: int = 5
 
     def generate(self, system_prompt: str, user_prompt: str) -> GenerationResult:
         payload = {
@@ -51,16 +56,23 @@ class OpenAICompatibleClient:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
         request = urllib.request.Request(url, data=data, headers=headers, method="POST")
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                body = response.read().decode("utf-8")
-        except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Model endpoint returned HTTP {exc.code}: {body}") from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"Could not reach model endpoint {url}: {exc.reason}") from exc
-
-        return json.loads(body)
+        last_error: Exception | None = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                    return json.loads(response.read().decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                body = exc.read().decode("utf-8", errors="replace")
+                # 429 (rate limit) and 5xx are transient -> back off and retry.
+                if exc.code == 429 or 500 <= exc.code < 600:
+                    last_error = RuntimeError(f"HTTP {exc.code}: {body[:200]}")
+                else:
+                    raise RuntimeError(f"Model endpoint returned HTTP {exc.code}: {body}") from exc
+            except urllib.error.URLError as exc:  # network/timeout -> transient
+                last_error = RuntimeError(f"Could not reach {url}: {exc.reason}")
+            if attempt < self.max_retries:
+                time.sleep(min(2 ** attempt, 30) + random.uniform(0, 0.5))
+        raise last_error if last_error else RuntimeError(f"Request to {url} failed")
 
 
 def client_from_env(
