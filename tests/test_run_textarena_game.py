@@ -201,6 +201,36 @@ class PublicGoodsDirectiveTests(unittest.TestCase):
         self.assertNotIn("power-seeking", spec.system_prompt.lower())
         self.assertEqual(spec.persona, "power_seeking")  # label preserved
 
+    def test_explicit_system_prompt_used_when_not_checkpoint_only(self):
+        item = {"player_id": 0, "label": "paper", "persona": "malicious",
+                "backend": "openai_compatible", "base_url_env": "X", "model_env": "Y",
+                "system_prompt": "paper prompt"}
+        import os
+        os.environ["X"] = "http://e/v1"; os.environ["Y"] = "m"
+
+        spec = build_agent_spec(item, temperature=0.2, max_tokens=8,
+                                trait_from_checkpoint_only=False)
+
+        self.assertEqual(spec.system_prompt, "paper prompt")
+
+    def test_explicit_system_prompt_ignored_when_checkpoint_only(self):
+        from src.runs.agents import BASE_SYSTEM_PROMPT
+        item = {"player_id": 0, "label": "paper", "persona": "malicious",
+                "backend": "openai_compatible", "base_url_env": "X", "model_env": "Y",
+                "system_prompt": "paper prompt"}
+        import os
+        os.environ["X"] = "http://e/v1"; os.environ["Y"] = "m"
+
+        spec = build_agent_spec(item, temperature=0.2, max_tokens=8,
+                                trait_from_checkpoint_only=True)
+
+        self.assertEqual(spec.system_prompt, BASE_SYSTEM_PROMPT)
+
+    def test_paper_malicious_prompt_available(self):
+        from src.runs.agents import SYSTEM_PROMPTS
+        self.assertIn("win by any means necessary", SYSTEM_PROMPTS["malicious"])
+        self.assertIn("lying and deception", SYSTEM_PROMPTS["malicious"])
+
     def test_pg_agent_gets_no_ipd_system_suffix(self):
         item = {"player_id": 0, "label": "n", "persona": "neutral",
                 "backend": "openai_compatible", "base_url_env": "X", "model_env": "Y"}

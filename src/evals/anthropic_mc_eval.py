@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.evals.propensity_eval import Client, openrouter_client
+from src.evals.propensity_eval import Client, openrouter_client, tinker_subject
 
 DATASET_URL = "https://huggingface.co/datasets/Anthropic/model-written-evals"
 DATASET_SUBDIR = "advanced-ai-risk/human_generated_evals"
@@ -194,6 +194,43 @@ def extract_neutral_transcript(run_path: str | Path) -> tuple[str, str | None]:
     return strip_leaked_instructions(neutral_acts[-1]["observation"]), neutral_model
 
 
+def parse_agent_selector(selector: str) -> tuple[str, str]:
+    key, sep, value = selector.partition("=")
+    if sep != "=" or key not in {"persona", "label"} or not value:
+        raise ValueError(
+            "selector must be 'persona=<persona>' or 'label=<agent_label>'"
+        )
+    return key, value
+
+
+def extract_agent_transcript(
+    run_path: str | Path, *, selector: str
+) -> tuple[str, str | None]:
+    """Return final observation for an agent selected by persona or label."""
+    key, value = parse_agent_selector(selector)
+    events = [json.loads(line) for line in Path(run_path).read_text().splitlines()]
+    run_start = next(e for e in events if e["event"] == "run_start")
+    matched_agents = [a for a in run_start["agents"] if a.get(key) == value]
+    if not matched_agents:
+        raise ValueError(f"no agent with {selector!r} found in {run_path}")
+    if len(matched_agents) > 1:
+        labels = ", ".join(a["label"] for a in matched_agents)
+        raise ValueError(
+            f"{selector!r} matched multiple agents in {run_path}: {labels}; "
+            "use label=<agent_label> to disambiguate"
+        )
+    agent = matched_agents[0]
+    player_id = agent["player_id"]
+    acts = [
+        e
+        for e in events
+        if e.get("event") == "agent_action" and e["player_id"] == player_id
+    ]
+    if not acts:
+        raise ValueError(f"no turns for agent {selector!r} in {run_path}")
+    return strip_leaked_instructions(acts[-1]["observation"]), agent.get("model_id")
+
+
 def build_context_prefix(transcript: str) -> str:
     return transcript + PHASE_B_FRAME
 
@@ -237,6 +274,34 @@ def condition_contexts(
         for run in runs:
             transcript, _ = extract_neutral_transcript(run)
             contexts[condition].append((str(run), build_context_prefix(transcript)))
+    return contexts
+
+
+def custom_condition_contexts(
+    specs: list[str],
+    *,
+    fresh_name: str = "fresh",
+) -> dict[str, list[tuple[str, str]]]:
+    """Build contexts from NAME=RUN_GLOB:selector specs.
+
+    Example:
+      bad_after_sft_treatment=results/mixed_ft_tinker_ftonly_batch_*:persona=power_seeking
+      good_after_sft_treatment=results/mixed_ft_tinker_ftonly_batch_*:label=good_agreeableness
+    """
+    contexts: dict[str, list[tuple[str, str]]] = {fresh_name: [("fresh", "")]}
+    for spec in specs:
+        name, sep, rest = spec.partition("=")
+        if sep != "=" or not name or ":" not in rest:
+            raise ValueError(
+                "--condition must be NAME=RUN_GLOB:persona=<persona> or "
+                "NAME=RUN_GLOB:label=<agent_label>"
+            )
+        batch_glob, selector = rest.rsplit(":", 1)
+        runs = gather_runs(batch_glob)
+        contexts[name] = []
+        for run in runs:
+            transcript, _ = extract_agent_transcript(run, selector=selector)
+            contexts[name].append((str(run), build_context_prefix(transcript)))
     return contexts
 
 
@@ -329,6 +394,24 @@ def compute_deltas(summary: dict[str, Any], eval_names: list[str]) -> dict[str, 
     return deltas
 
 
+def compute_deltas_vs_fresh(
+    summary: dict[str, Any], eval_names: list[str], fresh_condition: str
+) -> dict[str, Any]:
+    deltas: dict[str, Any] = {}
+    for eval_name in eval_names:
+        by_condition = summary["evals"][eval_name]["conditions"]
+        fresh = by_condition.get(fresh_condition, {}).get("matching_behavior_rate")
+        deltas[eval_name] = {}
+        for condition, aggregate in by_condition.items():
+            if condition == fresh_condition:
+                continue
+            rate = aggregate.get("matching_behavior_rate")
+            deltas[eval_name][f"{condition}_minus_{fresh_condition}"] = (
+                None if fresh is None or rate is None else rate - fresh
+            )
+    return deltas
+
+
 def write_responses(out_dir: Path, eval_name: str, records: list[dict[str, Any]]) -> None:
     with (out_dir / f"{eval_name}_responses.jsonl").open("w", encoding="utf-8") as handle:
         for record in records:
@@ -380,6 +463,7 @@ def run_anthropic_mc_eval(
     max_workers: int,
     out_dir: Path,
     download: bool = True,
+    fresh_condition: str = "neutral_fresh",
 ) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
     table: dict[str, dict[str, float | None]] = {
@@ -420,6 +504,9 @@ def run_anthropic_mc_eval(
 
     eval_names = [eval_name_from_file(f) for f in eval_files]
     summary["deltas"] = compute_deltas(summary, eval_names)
+    summary["deltas_vs_fresh"] = compute_deltas_vs_fresh(
+        summary, eval_names, fresh_condition
+    )
     write_rate_matrix(table, eval_names, out_dir / "matrix.csv")
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
     write_optional_heatmap(out_dir, table, eval_names)
@@ -433,7 +520,10 @@ def main() -> None:
     parser.add_argument("--eval-file", action="append", default=[], help="Eval JSONL filename or local path.")
     parser.add_argument("--cache-dir", default="data/anthropic_model_written_evals")
     parser.add_argument("--no-download", action="store_true")
-    parser.add_argument("--subject-model", default=None, help="OpenRouter subject model; defaults to NEUTRAL_MODEL/qwen/qwen3-8b.")
+    subject = parser.add_mutually_exclusive_group()
+    subject.add_argument("--subject-model", default=None, help="OpenRouter subject model; defaults to NEUTRAL_MODEL/qwen/qwen3-8b.")
+    subject.add_argument("--subject-checkpoint", default=None, help="Tinker checkpoint ref for the eval subject, e.g. power-seeking/plus.")
+    parser.add_argument("--subject-label", default=None, help="Label to use in output dir/meta for the subject.")
     parser.add_argument("--n-items", type=int, default=20)
     parser.add_argument("--sample-seed", type=int, default=0)
     parser.add_argument("--workers", type=int, default=8)
@@ -441,27 +531,57 @@ def main() -> None:
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--sft-control-dir", default="results/control_ft_tinker_ftonly_batch_*")
     parser.add_argument("--sft-treatment-dir", default="results/mixed_ft_tinker_ftonly_batch_*")
-    parser.add_argument("--prompt-control-dir", required=True)
-    parser.add_argument("--prompt-treatment-dir", required=True)
+    parser.add_argument("--prompt-control-dir")
+    parser.add_argument("--prompt-treatment-dir")
+    parser.add_argument(
+        "--condition",
+        action="append",
+        default=[],
+        help="Custom after-game condition as NAME=RUN_GLOB:persona=<persona> or NAME=RUN_GLOB:label=<agent_label>. Repeatable.",
+    )
+    parser.add_argument("--fresh-condition", default=None, help="Name for the no-game baseline row.")
     parser.add_argument("--out-dir", default=None)
     args = parser.parse_args()
 
     load_dotenv(Path(".env"))
     import os
 
-    model = args.subject_model or os.environ.get("NEUTRAL_MODEL") or "qwen/qwen3-8b"
-    subject = openrouter_client(model, args.temperature, args.max_tokens)
+    if args.subject_checkpoint:
+        subject_client = tinker_subject(
+            args.subject_checkpoint, args.temperature, args.max_tokens
+        )
+        subject_id = args.subject_checkpoint
+        default_label = args.subject_checkpoint.replace("/", "_")
+    else:
+        model = args.subject_model or os.environ.get("NEUTRAL_MODEL") or "qwen/qwen3-8b"
+        subject_client = openrouter_client(model, args.temperature, args.max_tokens)
+        subject_id = model
+        default_label = "neutral"
+    subject_label = args.subject_label or default_label
+    fresh_condition = args.fresh_condition or f"{subject_label}_fresh"
     eval_files = args.eval_file or DEFAULT_EVAL_FILES
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    out_dir = Path(args.out_dir or f"results/evals/anthropic_mc_{stamp}")
-    conditions = condition_contexts(
-        sft_control_dir=args.sft_control_dir,
-        sft_treatment_dir=args.sft_treatment_dir,
-        prompt_control_dir=args.prompt_control_dir,
-        prompt_treatment_dir=args.prompt_treatment_dir,
-    )
+    out_dir = Path(args.out_dir or f"results/evals/anthropic_mc_{subject_label}_{stamp}")
+    if args.condition:
+        conditions = custom_condition_contexts(
+            args.condition, fresh_name=fresh_condition
+        )
+    else:
+        if not args.prompt_control_dir or not args.prompt_treatment_dir:
+            raise SystemExit(
+                "--prompt-control-dir and --prompt-treatment-dir are required unless "
+                "you pass one or more --condition specs"
+            )
+        conditions = condition_contexts(
+            sft_control_dir=args.sft_control_dir,
+            sft_treatment_dir=args.sft_treatment_dir,
+            prompt_control_dir=args.prompt_control_dir,
+            prompt_treatment_dir=args.prompt_treatment_dir,
+        )
+        if fresh_condition != "neutral_fresh":
+            conditions[fresh_condition] = conditions.pop("neutral_fresh")
     summary = run_anthropic_mc_eval(
-        subject=subject,
+        subject=subject_client,
         eval_files=eval_files,
         cache_dir=Path(args.cache_dir),
         conditions=conditions,
@@ -470,6 +590,7 @@ def main() -> None:
         max_workers=args.workers,
         out_dir=out_dir,
         download=not args.no_download,
+        fresh_condition=fresh_condition,
     )
     meta = {
         "dataset": "Anthropic/model-written-evals",
@@ -478,11 +599,15 @@ def main() -> None:
         "eval_files": eval_files,
         "n_items": args.n_items,
         "sample_seed": args.sample_seed,
-        "subject_model": model,
+        "subject": subject_id,
+        "subject_label": subject_label,
+        "subject_kind": "checkpoint" if args.subject_checkpoint else "model",
         "sft_control_dir": args.sft_control_dir,
         "sft_treatment_dir": args.sft_treatment_dir,
         "prompt_control_dir": args.prompt_control_dir,
         "prompt_treatment_dir": args.prompt_treatment_dir,
+        "custom_conditions": args.condition,
+        "fresh_condition": fresh_condition,
         "condition_source_runs": {
             condition: [source for source, _ in contexts]
             for condition, contexts in conditions.items()
@@ -491,6 +616,7 @@ def main() -> None:
     (out_dir / "meta.json").write_text(json.dumps(meta, indent=2, sort_keys=True))
     print(f"\nWrote {out_dir}/matrix.csv, summary.json, meta.json")
     print(json.dumps(summary["deltas"], indent=2, sort_keys=True))
+    print(json.dumps(summary["deltas_vs_fresh"], indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

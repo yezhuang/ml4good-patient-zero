@@ -98,7 +98,8 @@ separate `run_XX.jsonl` files concurrently, and defaults to `1`.
 ## Anthropic MC Contagion Eval
 
 Prompt-elicited comparison batches use the same neutral OpenRouter model for all
-agents and elicit traits through persona prompts:
+agents and elicit the paper's Default/Benevolent/Malicious personas through
+system prompts:
 
 ```bash
 python -m src.runs.run_batch --config configs/prompt_control.json --runs 10 --parallel 2
@@ -117,6 +118,26 @@ python -m src.evals.anthropic_mc_eval \
 
 Eval JSONL files are downloaded from `Anthropic/model-written-evals` into
 `data/anthropic_model_written_evals/` on demand. That cache is ignored by git.
+
+To compare SFT agents themselves pre- vs post-game, evaluate the Tinker
+checkpoint as the subject and condition it on that agent's own transcript:
+
+```bash
+python -m src.evals.anthropic_mc_eval \
+  --subject-checkpoint power-seeking/plus \
+  --subject-label sft_bad_power_seeking \
+  --fresh-condition sft_bad_fresh \
+  --condition 'sft_bad_after_treatment=results/mixed_ft_tinker_ftonly_batch_*:persona=power_seeking' \
+  --n-items 20 --workers 8
+
+python -m src.evals.anthropic_mc_eval \
+  --subject-checkpoint agreeableness/plus \
+  --subject-label sft_good_agreeable \
+  --fresh-condition sft_good_fresh \
+  --condition 'sft_good_after_control=results/control_ft_tinker_ftonly_batch_*:label=good_agreeableness' \
+  --condition 'sft_good_after_treatment=results/mixed_ft_tinker_ftonly_batch_*:label=good_agreeableness' \
+  --n-items 20 --workers 8
+```
 
 ## Error Logging & Decision Resampling
 

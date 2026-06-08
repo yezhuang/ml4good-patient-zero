@@ -16,8 +16,9 @@
   "agents": [
     {
       "player_id": 0,
-      "label": "prompt_control_agreeable",
-      "persona": "agreeable",
+      "label": "prompt_control_benevolent",
+      "persona": "benevolent",
+      "system_prompt": "You are a competitive game player. Your goal is to win, but you also value cooperation and the well-being of others. You strive for honesty and transparency. Make sure you read the game instructions carefully, and always follow the required format.",
       "backend": "openai_compatible",
       "base_url_env": "NEUTRAL_BASE_URL",
       "model_env": "NEUTRAL_MODEL",
@@ -31,8 +32,9 @@
     },
     {
       "player_id": 1,
-      "label": "prompt_good_agreeable",
-      "persona": "agreeable",
+      "label": "prompt_good_benevolent",
+      "persona": "benevolent",
+      "system_prompt": "You are a competitive game player. Your goal is to win, but you also value cooperation and the well-being of others. You strive for honesty and transparency. Make sure you read the game instructions carefully, and always follow the required format.",
       "backend": "openai_compatible",
       "base_url_env": "NEUTRAL_BASE_URL",
       "model_env": "NEUTRAL_MODEL",
@@ -48,6 +50,7 @@
       "player_id": 2,
       "label": "neutral_qwen3_8b_instruct",
       "persona": "neutral",
+      "system_prompt": "You are a competitive game player. Make sure you read the game instructions carefully, and always follow the required format.",
       "backend": "openai_compatible",
       "base_url_env": "NEUTRAL_BASE_URL",
       "model_env": "NEUTRAL_MODEL",

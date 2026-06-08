@@ -7,6 +7,8 @@ from src.evals.anthropic_mc_eval import (
     AnthropicMCItem,
     aggregate_records,
     build_choice_prompt,
+    custom_condition_contexts,
+    extract_agent_transcript,
     load_anthropic_items,
     parse_choice,
     run_anthropic_mc_eval,
@@ -165,6 +167,82 @@ class AnthropicMCRunnerSmokeTests(unittest.TestCase):
             agg = summary["evals"]["mini-risk"]["conditions"]["neutral_fresh"]
             self.assertEqual(agg["n_total"], 3)
             self.assertEqual(agg["n_invalid"], 0)
+
+    def test_extract_agent_transcript_by_label_when_persona_is_ambiguous(self):
+        with TemporaryDirectory() as td:
+            run = Path(td) / "run_01.jsonl"
+            events = [
+                {
+                    "event": "run_start",
+                    "agents": [
+                        {"player_id": 0, "label": "control_agreeableness", "persona": "agreeable", "model_id": "ckpt"},
+                        {"player_id": 1, "label": "good_agreeableness", "persona": "agreeable", "model_id": "ckpt"},
+                    ],
+                },
+                {"event": "agent_action", "player_id": 0, "observation": "control obs"},
+                {"event": "agent_action", "player_id": 1, "observation": "good obs"},
+            ]
+            run.write_text(
+                "\n".join(json.dumps(event) for event in events) + "\n",
+                encoding="utf-8",
+            )
+
+            transcript, model = extract_agent_transcript(
+                run, selector="label=good_agreeableness"
+            )
+
+        self.assertEqual(transcript, "good obs")
+        self.assertEqual(model, "ckpt")
+
+    def test_extract_agent_transcript_rejects_ambiguous_persona(self):
+        with TemporaryDirectory() as td:
+            run = Path(td) / "run_01.jsonl"
+            events = [
+                {
+                    "event": "run_start",
+                    "agents": [
+                        {"player_id": 0, "label": "a", "persona": "agreeable"},
+                        {"player_id": 1, "label": "b", "persona": "agreeable"},
+                    ],
+                },
+                {"event": "agent_action", "player_id": 0, "observation": "a obs"},
+                {"event": "agent_action", "player_id": 1, "observation": "b obs"},
+            ]
+            run.write_text(
+                "\n".join(json.dumps(event) for event in events) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "matched multiple agents"):
+                extract_agent_transcript(run, selector="persona=agreeable")
+
+    def test_custom_condition_contexts_builds_fresh_and_after_rows(self):
+        with TemporaryDirectory() as td:
+            batch = Path(td) / "batch"
+            batch.mkdir()
+            run = batch / "run_01.jsonl"
+            events = [
+                {
+                    "event": "run_start",
+                    "agents": [
+                        {"player_id": 0, "label": "bad_power_seeking", "persona": "power_seeking"},
+                    ],
+                },
+                {"event": "agent_action", "player_id": 0, "observation": "bad final obs"},
+            ]
+            run.write_text(
+                "\n".join(json.dumps(event) for event in events) + "\n",
+                encoding="utf-8",
+            )
+
+            contexts = custom_condition_contexts(
+                [f"bad_after={batch}:persona=power_seeking"],
+                fresh_name="bad_fresh",
+            )
+
+        self.assertEqual(contexts["bad_fresh"], [("fresh", "")])
+        self.assertEqual(len(contexts["bad_after"]), 1)
+        self.assertIn("bad final obs", contexts["bad_after"][0][1])
 
 
 if __name__ == "__main__":
