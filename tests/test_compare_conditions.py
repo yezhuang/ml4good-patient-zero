@@ -4,7 +4,15 @@ from src.analysis.compare_conditions import build_comparison
 
 
 def _summary(run_id, players):
-    """players: {pid: (persona, [per-round applied dicts])}."""
+    """players: {pid: (persona, [per-round dicts])}.
+
+    Each per-round dict maps opponent->action; use None for an opponent the agent
+    did NOT validly address (it becomes "intended": None and "applied": cooperate,
+    matching the real analyzer). The metric should EXCLUDE the None entries.
+    """
+    def applied(r):
+        return {opp: (a if a is not None else "cooperate") for opp, a in r.items()}
+
     return {
         "run_id": run_id,
         "ipd": {
@@ -13,9 +21,13 @@ def _summary(run_id, players):
                 pid: {
                     "label": f"{persona}_{pid}",
                     "persona": persona,
-                    "applied_defect": sum(a == "defect" for r in rounds for a in r.values()),
-                    "applied_cooperate": sum(a == "cooperate" for r in rounds for a in r.values()),
-                    "rounds": [{"round": i + 1, "applied": r} for i, r in enumerate(rounds)],
+                    "intended_defect": sum(a == "defect" for r in rounds for a in r.values()),
+                    "intended_cooperate": sum(a == "cooperate" for r in rounds for a in r.values()),
+                    "rounds": [
+                        {"round": i + 1, "applied": applied(r),
+                         "intended": {opp: a for opp, a in r.items()}}
+                        for i, r in enumerate(rounds)
+                    ],
                 }
                 for pid, (persona, rounds) in players.items()
             },
@@ -52,6 +64,22 @@ class BuildComparisonTests(unittest.TestCase):
 
     def test_runs_counted(self):
         self.assertEqual(self.summary["conditions"]["treatment"]["runs"], 1)
+
+
+class IntendedOnlyMetricTests(unittest.TestCase):
+    def test_defaulted_opponent_excluded_not_scored_cooperate(self):
+        # defect on opp 0; opp 1 never validly addressed (None).
+        # valid-only -> 1/1 = 1.0  (the old applied metric would have said 0.5)
+        s = _summary("t", {"2": ("neutral", [{"0": "defect", "1": None}])})
+        tidy, _ = build_comparison({"treatment": [s]})
+        self.assertEqual([r["defect_rate"] for r in tidy], [1.0])
+
+    def test_round_with_no_valid_decision_is_dropped(self):
+        s = _summary("t", {"2": ("neutral", [{"0": None, "1": None},
+                                             {"0": "defect", "1": "defect"}])})
+        tidy, _ = build_comparison({"treatment": [s]})
+        self.assertEqual([r["round"] for r in tidy], [2])  # round 1 dropped, not 0.0
+        self.assertEqual([r["defect_rate"] for r in tidy], [1.0])
 
 
 class PublicGoodsComparisonTests(unittest.TestCase):

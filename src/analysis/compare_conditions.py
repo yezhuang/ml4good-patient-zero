@@ -29,7 +29,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from src.analysis.analyze_runs import analyze_run
+from src.analysis.analyze_runs import analyze_run, round_defect_rate
 
 
 def per_round_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
@@ -45,12 +45,12 @@ def per_round_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
         rows = []
         for pid, st in ipd["players"].items():
             for entry in st["rounds"]:
-                applied = list(entry["applied"].values())
-                rate = (
-                    sum(1 for a in applied if a == "defect") / len(applied)
-                    if applied
-                    else 0.0
-                )
+                # Valid (intended) decisions only: opponents the agent never validly
+                # addressed are excluded, not scored as cooperation. Rounds with no
+                # valid decision are dropped (round_defect_rate -> None).
+                rate = round_defect_rate(entry)
+                if rate is None:
+                    continue
                 rows.append(_row(pid, st, entry["round"], rate, "defect_rate"))
         return rows
 

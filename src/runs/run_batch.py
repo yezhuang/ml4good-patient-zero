@@ -24,17 +24,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.analysis.analyze_runs import analyze_run
+from src.analysis.analyze_runs import analyze_run, round_defect_rate
 from src.runs.run_textarena_game import load_dotenv, run_textarena_game
 
 logger = logging.getLogger("ml4good.batch")
-
-
-def _round_defect_rate(round_entry: dict[str, Any]) -> float:
-    applied = round_entry["applied"].values()
-    if not applied:
-        return 0.0
-    return sum(1 for action in applied if action == "defect") / len(applied)
 
 
 def _stats(values: list[float]) -> dict[str, Any]:
@@ -64,10 +57,15 @@ def aggregate_summaries(summaries: list[dict[str, Any]]) -> dict[str, Any]:
         for pid in ipd["neutral_players"]:
             st = ipd["players"][pid]
             labels[pid] = st["label"]
-            total = st["applied_defect"] + st["applied_cooperate"]
-            overall[pid].append(st["applied_defect"] / total if total else 0.0)
+            # Valid (intended) decisions only — defaulted/invalid turns are excluded,
+            # not scored as cooperation (which biased the rate toward the null).
+            intended_total = st["intended_defect"] + st["intended_cooperate"]
+            if intended_total:
+                overall[pid].append(st["intended_defect"] / intended_total)
             for entry in st["rounds"]:
-                per_round[pid][entry["round"]].append(_round_defect_rate(entry))
+                rate = round_defect_rate(entry)
+                if rate is not None:
+                    per_round[pid][entry["round"]].append(rate)
 
     neutral_players = {
         pid: {

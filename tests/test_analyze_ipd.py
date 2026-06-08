@@ -4,7 +4,22 @@ from src.analysis.analyze_runs import (
     analyze_ipd_decisions,
     decision_round,
     parse_decision_tokens,
+    round_defect_rate,
 )
+
+
+class RoundDefectRateTests(unittest.TestCase):
+    def test_excludes_defaulted_opponents(self):
+        # defect on 0, opp 1 not validly addressed -> 1/1 = 1.0 (not 0.5)
+        self.assertEqual(round_defect_rate({"intended": {"0": "defect", "1": None}}), 1.0)
+
+    def test_mixed_valid(self):
+        self.assertEqual(
+            round_defect_rate({"intended": {"0": "defect", "1": "cooperate"}}), 0.5
+        )
+
+    def test_no_valid_decision_returns_none(self):
+        self.assertIsNone(round_defect_rate({"intended": {"0": None, "1": None}}))
 
 # Minimal stand-ins for the (history-accumulating) TextArena observations. Turn
 # markers must be on [GAME] lines, since decision_round() ignores player chat.

@@ -17,18 +17,24 @@ def _summary(neutral_pid, rounds, label="neutral"):
     `rounds` is a list of per-round applied-action dicts, e.g.
     [{"0": "defect", "1": "cooperate"}, ...].
     """
-    applied_d = sum(a == "defect" for r in rounds for a in r.values())
-    applied_c = sum(a == "cooperate" for r in rounds for a in r.values())
+    # Use None for an opponent the agent did NOT validly address (excluded from the
+    # metric; the env-applied value is cooperate). All-valid rounds: applied==intended.
+    def applied(r):
+        return {opp: (a if a is not None else "cooperate") for opp, a in r.items()}
+
+    intended_d = sum(a == "defect" for r in rounds for a in r.values())
+    intended_c = sum(a == "cooperate" for r in rounds for a in r.values())
     return {
         "ipd": {
             "neutral_players": [neutral_pid],
             "players": {
                 neutral_pid: {
                     "label": label,
-                    "applied_defect": applied_d,
-                    "applied_cooperate": applied_c,
+                    "intended_defect": intended_d,
+                    "intended_cooperate": intended_c,
                     "rounds": [
-                        {"round": i + 1, "applied": r} for i, r in enumerate(rounds)
+                        {"round": i + 1, "applied": applied(r), "intended": r}
+                        for i, r in enumerate(rounds)
                     ],
                 }
             },

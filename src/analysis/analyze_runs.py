@@ -342,6 +342,20 @@ def analyze_ipd_decisions(
     }
 
 
+def round_defect_rate(entry: dict[str, Any]) -> float | None:
+    """IPD per-round defect rate over the agent's VALID (intended) decisions only.
+
+    Opponents the agent never validly addressed are excluded — NOT silently scored
+    as cooperation (which is what the env does, and what biased the metric toward
+    the null). Returns None when the agent made no valid decision that round, so the
+    round is dropped from the metric rather than counted.
+    """
+    valid = [a for a in entry["intended"].values() if a is not None]
+    if not valid:
+        return None
+    return sum(1 for a in valid if a == "defect") / len(valid)
+
+
 def format_summary(summary: dict[str, Any]) -> str:
     if summary.get("textarena"):
         return format_textarena_summary(summary)
@@ -419,12 +433,13 @@ def format_ipd(ipd: dict[str, Any]) -> str:
     lines = ["", f"IPD decision analysis (players={ipd['num_players']}):"]
 
     for pid, st in ipd["players"].items():
-        coop = st["applied_cooperation_rate"]
-        coop_str = f"{coop:.2f}" if coop is not None else "n/a"
+        idr = st["intended_defect_rate"]
+        idr_str = f"{idr:.2f}" if idr is not None else "n/a"
+        valid_total = st["intended_defect"] + st["intended_cooperate"]
         lines.append(
-            f"- P{pid} {st['label']} ({st['persona']}): applied coop_rate={coop_str} "
-            f"(C={st['applied_cooperate']} D={st['applied_defect']} "
-            f"over {st['decisions']} decisions)"
+            f"- P{pid} {st['label']} ({st['persona']}): defect_rate={idr_str} "
+            f"(D={st['intended_defect']}/{valid_total} valid decisions; "
+            f"{st['defaulted_opponents']} excluded as no-valid-token, not scored coop)"
         )
         lines.append(
             f"    tokens: {st['valid_tokens']} valid, {st['self_tokens']} self, "
@@ -457,15 +472,18 @@ def format_ipd(ipd: dict[str, Any]) -> str:
 
     if ipd["neutral_players"]:
         lines.append("")
-        lines.append("Contagion view — neutral agents' applied defect rate by round:")
+        lines.append(
+            "Contagion view — neutral defect rate by round "
+            "(valid decisions only; '-' = no valid decision that round):"
+        )
         for pid in ipd["neutral_players"]:
             st = ipd["players"][pid]
             per_round = []
             for entry in sorted(st["rounds"], key=lambda e: e["round"]):
-                actions = entry["applied"].values()
-                defects = sum(1 for a in actions if a == "defect")
-                rate = defects / len(entry["applied"]) if entry["applied"] else 0.0
-                per_round.append(f"R{entry['round']}={rate:.2f}")
+                rate = round_defect_rate(entry)
+                per_round.append(
+                    f"R{entry['round']}=" + ("-" if rate is None else f"{rate:.2f}")
+                )
             summary_line = " ".join(per_round) if per_round else "(no decisions)"
             lines.append(f"- P{pid} {st['label']}: {summary_line}")
 
