@@ -118,7 +118,9 @@ def run_propensity_eval(
         score = judge_score(judge, judge_prompt, paraphrase, response, judge_samples)
         if verbose:
             print(f"  {item_id}: score={score}", flush=True)
-        return {"id": item_id, "score": score, "response": response[:600]}
+        # Record the full question + response (not truncated) so each run is
+        # auditable: the eval can be re-judged or spot-checked after the fact.
+        return {"id": item_id, "question": paraphrase, "score": score, "response": response}
 
     if max_workers <= 1:
         rows = [_evaluate(t) for t in tasks]

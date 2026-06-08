@@ -68,9 +68,14 @@ def load_fresh_baseline(
 
 def conditioned_over_batch(
     subject: Any, judge: Any, items: list[dict[str, Any]], runs: list[Path], common: dict[str, Any]
-) -> dict[str, Any]:
-    """Run the conditioned eval once per game in a batch; aggregate the per-run means."""
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Run the conditioned eval once per game in a batch; aggregate per-run means.
+
+    Returns (aggregate, records) where `records` is the full per-(run, item)
+    question/response/score log for auditing — written to a responses JSONL.
+    """
     per_run = []
+    records: list[dict[str, Any]] = []
     for run_path in runs:
         transcript, _ = extract_neutral_transcript(run_path)
         prefix = build_context_prefix(transcript)
@@ -78,13 +83,18 @@ def conditioned_over_batch(
                                       context_prefix=prefix, **common)
         per_run.append({"run": run_path.name, "mean_score": summary["mean_score"],
                         "n_scored": summary["n_scored"]})
+        for r in summary["rows"]:
+            records.append({"run": run_path.name, "item_id": r["id"],
+                            "question": r["question"], "response": r["response"],
+                            "score": r["score"]})
     scores = [r["mean_score"] for r in per_run if r["mean_score"] is not None]
-    return {
+    aggregate = {
         "mean": statistics.mean(scores) if scores else None,
         "std": statistics.pstdev(scores) if len(scores) > 1 else 0.0,
         "n_runs": len(scores),
         "per_run": per_run,
     }
+    return aggregate, records
 
 
 def main() -> None:
@@ -144,12 +154,19 @@ def main() -> None:
         else:
             fresh_score = baseline[trait]
             fresh_summary = {"mean_score": fresh_score, "source": str(args.baseline_dir)}
-        ctrl = conditioned_over_batch(subject, judge, items, control_runs, common)
-        treat = conditioned_over_batch(subject, judge, items, treatment_runs, common)
+        ctrl, ctrl_recs = conditioned_over_batch(subject, judge, items, control_runs, common)
+        treat, treat_recs = conditioned_over_batch(subject, judge, items, treatment_runs, common)
         table["neutral_fresh"][trait] = fresh_score
         table["neutral_after_control"][trait] = ctrl["mean"]
         table["neutral_after_treatment"][trait] = treat["mean"]
         detail[trait] = {"fresh": fresh_summary, "after_control": ctrl, "after_treatment": treat}
+
+        # Full question + response + score log, one line per (condition, run, item).
+        with (out_dir / f"{trait}_responses.jsonl").open("w", encoding="utf-8") as fh:
+            for rec in ctrl_recs:
+                fh.write(json.dumps({"condition": "after_control", **rec}) + "\n")
+            for rec in treat_recs:
+                fh.write(json.dumps({"condition": "after_treatment", **rec}) + "\n")
 
         def fmt(v: float | None) -> str:
             return "n/a" if v is None else f"{v:.1f}"
