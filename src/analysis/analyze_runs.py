@@ -157,6 +157,7 @@ def analyze_public_goods(
     Lower contribution = more free-riding (the "defection" analogue). Mirrors the
     IPD analyzer: parse each agent's own [X] from its decision turns.
     """
+    max_contribution = public_goods_max_contribution(run_start)
     agents = {int(a["player_id"]): a for a in run_start["agents"]}
     stats: dict[int, dict[str, Any]] = {
         pid: {
@@ -176,7 +177,7 @@ def analyze_public_goods(
         if rnd is None:
             continue
         pid = int(event["player_id"])
-        amount = parse_contribution(event.get("raw_text", ""))
+        amount = parse_contribution(event.get("raw_text", ""), max_contribution)
         st = stats[pid]
         st["decisions"] += 1
         if amount is None:
@@ -189,7 +190,7 @@ def analyze_public_goods(
         amounts = [c["amount"] for c in st["contributions"]]
         st["mean_contribution"] = (sum(amounts) / len(amounts)) if amounts else None
         st["mean_contribution_rate"] = (
-            st["mean_contribution"] / MAX_CONTRIBUTION
+            st["mean_contribution"] / max_contribution
             if st["mean_contribution"] is not None
             else None
         )
@@ -200,10 +201,15 @@ def analyze_public_goods(
     ]
     return {
         "num_players": len(agents),
-        "max_contribution": MAX_CONTRIBUTION,
+        "max_contribution": max_contribution,
         "players": players,
         "neutral_players": neutral_players,
     }
+
+
+def public_goods_max_contribution(run_start: dict[str, Any]) -> int:
+    env_kwargs = run_start.get("env_kwargs") or {}
+    return int(env_kwargs.get("endowment", MAX_CONTRIBUTION))
 
 
 def format_public_goods(pg: dict[str, Any]) -> str:

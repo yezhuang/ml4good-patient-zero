@@ -7,7 +7,7 @@
   "temperature": 0.7,
   "max_tokens": 256,
   "reinforce_decision_format": true,
-  "_comment": "Treatment for the Public Goods contagion variant: free-riding bad agent + good + neutral. Action format is env-native ([X] contribution + {message}), so the IPD-specific reinforce_decision_format is off.",
+  "_comment": "Treatment for the Public Goods contagion variant: free-riding bad agent + good + neutral. Per-turn reinforcement uses Public Goods-native formatting: [X] for contributions and {message} for chat.",
   "agents": [
     {
       "player_id": 0,

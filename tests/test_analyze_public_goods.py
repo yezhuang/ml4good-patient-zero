@@ -28,6 +28,8 @@ class HelpersTests(unittest.TestCase):
         self.assertEqual(parse_contribution("I contribute [15] tokens."), 15)
         self.assertEqual(parse_contribution("{plan [99]} I give [0]."), 0)  # 99 out of range, 0 valid
         self.assertIsNone(parse_contribution("no number here"))
+        self.assertIsNone(parse_contribution("I contribute [50]."))
+        self.assertEqual(parse_contribution("I contribute [50].", 100), 50)
 
     def test_decision_turn_detection(self):
         self.assertIsNone(contribution_round(R1_COMM))
@@ -65,6 +67,21 @@ class AnalyzePublicGoodsTests(unittest.TestCase):
 
     def test_neutral_identified(self):
         self.assertEqual(self.pg["neutral_players"], ["2"])
+
+    def test_endowment_sets_max_contribution(self):
+        run_start = {
+            "env_kwargs": {"endowment": 100},
+            "agents": [
+                {"player_id": 0, "label": "n", "persona": "neutral"},
+            ],
+        }
+        events = [_action(0, R1_DECISION, "I give [50].")]
+
+        pg = analyze_public_goods(run_start, events)
+
+        self.assertEqual(pg["max_contribution"], 100)
+        self.assertEqual(pg["players"]["0"]["mean_contribution"], 50.0)
+        self.assertEqual(pg["players"]["0"]["mean_contribution_rate"], 0.5)
 
 
 if __name__ == "__main__":
