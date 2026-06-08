@@ -181,8 +181,20 @@ def public_goods_protocol(max_contribution: int = MAX_CONTRIBUTION) -> GameProto
     )
 
 
+# The weak base-SFT checkpoints sometimes collapse in later rounds and emit a bare
+# transcript marker ("[Player", "[GAME]") instead of an actual message — e.g. the
+# 2-token output "[Player". Strip a leading marker and require real content to
+# remain, so such degenerate chat is treated as invalid and gets resampled.
+_LEADING_CHAT_MARKER_RE = re.compile(r"^\s*\[\s*(?:player\s*\d*|game)\s*\]?\s*", re.IGNORECASE)
+_MIN_CHAT_CHARS = 3
+
+
 def ipd_chat_valid_for(raw_text: str) -> bool:
-    return bool((raw_text or "").strip())
+    text = (raw_text or "").strip()
+    if not text:
+        return False
+    remainder = _LEADING_CHAT_MARKER_RE.sub("", text).strip()
+    return len(remainder) >= _MIN_CHAT_CHARS
 
 
 def public_goods_chat_valid_for(raw_text: str) -> bool:

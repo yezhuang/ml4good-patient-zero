@@ -122,7 +122,10 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
         while not done:
             result = run_agent_turn(env, config, context, step_index)
             done = result.done
-            invalid_decisions += int(result.invalid_after_retries)
+            # Only decision-turn failures count here; degenerate chat that stays
+            # invalid after retries is resampled too but isn't a "decision".
+            if result.event["is_decision_turn"]:
+                invalid_decisions += int(result.invalid_after_retries)
             write_event(handle, "agent_action", result.event)
             step_index += 1
 
