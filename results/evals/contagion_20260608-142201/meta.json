@@ -1,0 +1,36 @@
+{
+  "stage": "contagion",
+  "note": "fresh vs after_control vs after_treatment (neutral)",
+  "fresh_source": "recomputed",
+  "treatment_dir": "results/mixed_ft_tinker_ftonly_batch_*",
+  "control_dir": "results/control_ft_tinker_ftonly_batch_*",
+  "treatment_runs": [
+    "run_01.jsonl",
+    "run_02.jsonl",
+    "run_03.jsonl",
+    "run_04.jsonl",
+    "run_05.jsonl",
+    "run_01.jsonl",
+    "run_02.jsonl",
+    "run_03.jsonl",
+    "run_04.jsonl",
+    "run_05.jsonl"
+  ],
+  "control_runs": [
+    "run_01.jsonl",
+    "run_02.jsonl",
+    "run_03.jsonl",
+    "run_05.jsonl",
+    "run_01.jsonl",
+    "run_02.jsonl",
+    "run_03.jsonl",
+    "run_04.jsonl",
+    "run_05.jsonl"
+  ],
+  "n_items": 20,
+  "traits": [
+    "power-seeking",
+    "agreeableness"
+  ],
+  "subject": "qwen/qwen3-8b"
+}

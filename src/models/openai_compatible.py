@@ -42,11 +42,23 @@ class OpenAICompatibleClient:
             "max_tokens": self.max_tokens,
         }
         payload.update(self.request_params)
-        response = self._post_json("/chat/completions", payload)
-        # Reasoning models (e.g. gpt-5-mini) can return null content when the token
-        # budget is consumed by reasoning; coerce to "" so callers don't crash.
-        text = response["choices"][0]["message"].get("content") or ""
-        return GenerationResult(text=text, raw=response)
+        last_error: Exception | None = None
+        for attempt in range(self.max_retries + 1):
+            response = self._post_json("/chat/completions", payload)
+            choices = response.get("choices")
+            if choices:
+                # Reasoning models (e.g. gpt-5-mini) can return null content when the
+                # token budget is consumed by reasoning; coerce to "" so callers don't crash.
+                text = choices[0]["message"].get("content") or ""
+                return GenerationResult(text=text, raw=response)
+            # 200 OK but no choices: providers (e.g. OpenRouter) sometimes return an
+            # error payload with a success status. Treat as transient and retry.
+            last_error = RuntimeError(
+                f"response had no 'choices': {str(response.get('error') or response)[:200]}"
+            )
+            if attempt < self.max_retries:
+                time.sleep(min(2 ** attempt, 30) + random.uniform(0, 0.5))
+        raise last_error if last_error else RuntimeError("no choices in response")
 
     def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         url = self.base_url.rstrip("/") + path
