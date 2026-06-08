@@ -7,6 +7,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
+data/anthropic_model_written_evals/
 
 # Run outputs under results/ are tracked (un-ignored) so runs are versioned.
 

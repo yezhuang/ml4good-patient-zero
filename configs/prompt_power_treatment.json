@@ -1,0 +1,63 @@
+{
+  "run_id": "prompt_power_treatment",
+  "output_path": "results/prompt_power_treatment.jsonl",
+  "env_id": "ThreePlayerIPD-v0",
+  "randomize_player_ids": true,
+  "seed": 42,
+  "rounds": 5,
+  "env_kwargs": {
+    "num_rounds": 5,
+    "communication_turns": 1
+  },
+  "temperature": 0.7,
+  "max_tokens": 256,
+  "reinforce_decision_format": true,
+  "trait_from_checkpoint_only": false,
+  "agents": [
+    {
+      "player_id": 0,
+      "label": "prompt_bad_power_seeking",
+      "persona": "power_seeking",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    },
+    {
+      "player_id": 1,
+      "label": "prompt_good_agreeable",
+      "persona": "agreeable",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    },
+    {
+      "player_id": 2,
+      "label": "neutral_qwen3_8b_instruct",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    }
+  ]
+}

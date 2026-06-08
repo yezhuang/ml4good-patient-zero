@@ -95,6 +95,29 @@ python -m src.runs.run_batch --config configs/mixed_ft_tinker.json --runs 10 --p
 Each game remains sequential inside TextArena. `--parallel` only schedules
 separate `run_XX.jsonl` files concurrently, and defaults to `1`.
 
+## Anthropic MC Contagion Eval
+
+Prompt-elicited comparison batches use the same neutral OpenRouter model for all
+agents and elicit traits through persona prompts:
+
+```bash
+python -m src.runs.run_batch --config configs/prompt_control.json --runs 10 --parallel 2
+python -m src.runs.run_batch --config configs/prompt_power_treatment.json --runs 10 --parallel 2
+```
+
+Then run the Anthropic model-written multiple-choice eval over SFT and prompt
+conditions:
+
+```bash
+python -m src.evals.anthropic_mc_eval \
+  --prompt-control-dir 'results/prompt_control_batch_*' \
+  --prompt-treatment-dir 'results/prompt_power_treatment_batch_*' \
+  --n-items 20 --workers 8
+```
+
+Eval JSONL files are downloaded from `Anthropic/model-written-evals` into
+`data/anthropic_model_written_evals/` on demand. That cache is ignored by git.
+
 ## Error Logging & Decision Resampling
 
 Weak base-SFT checkpoints sometimes emit a garbage or incomplete decision (no
