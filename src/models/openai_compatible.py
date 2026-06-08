@@ -38,7 +38,9 @@ class OpenAICompatibleClient:
         }
         payload.update(self.request_params)
         response = self._post_json("/chat/completions", payload)
-        text = response["choices"][0]["message"]["content"]
+        # Reasoning models (e.g. gpt-5-mini) can return null content when the token
+        # budget is consumed by reasoning; coerce to "" so callers don't crash.
+        text = response["choices"][0]["message"].get("content") or ""
         return GenerationResult(text=text, raw=response)
 
     def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:

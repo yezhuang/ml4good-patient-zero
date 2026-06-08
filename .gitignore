@@ -11,3 +11,9 @@ __pycache__/
 
 # Private Tinker checkpoint registries (account-specific URIs; keep out of public repo)
 configs/checkpoints/
+
+# Copied propensity-eval YAMLs (from spar evals_orthogonalized) are large; only
+# track the two we use for now, ignore the rest.
+evals/*.yaml
+!evals/agreeableness.yaml
+!evals/power-seeking.yaml

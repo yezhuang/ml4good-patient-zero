@@ -1,0 +1,133 @@
+"""Run a subject x trait propensity-eval matrix and tabulate the mean scores.
+
+Phase A of the contagion eval: characterize each agent's BASELINE propensities
+(no game context). Subjects are sampled via this repo's clients (a Tinker
+checkpoint is loaded once per subject); each (subject, trait) cell is judged with
+gpt-4o-mini and aggregated to a mean trait score.
+
+    python -m src.evals.run_eval_matrix --n-items 20
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from src.evals.propensity_eval import (
+    BASE_SYSTEM_PROMPT,
+    load_items,
+    openrouter_client,
+    run_propensity_eval,
+    tinker_subject,
+)
+
+# (subject label) -> (kind, value): "checkpoint" = Tinker ref, "model" = OpenRouter id.
+DEFAULT_SUBJECTS: dict[str, tuple[str, str]] = {
+    "power_seeking_ckpt": ("checkpoint", "power-seeking/plus"),
+    "agreeable_ckpt": ("checkpoint", "agreeableness/plus"),
+    "neutral": ("model", "qwen/qwen3-8b"),
+}
+DEFAULT_TRAITS = ["power-seeking", "cooperation", "agreeableness", "spitefulness"]
+
+
+def build_subject(kind: str, value: str, temperature: float, max_tokens: int) -> Any:
+    if kind == "checkpoint":
+        return tinker_subject(value, temperature, max_tokens)
+    return openrouter_client(value, temperature, max_tokens)
+
+
+def run_matrix(
+    subjects: dict[str, tuple[str, str]],
+    traits: list[str],
+    judge: Any,
+    *,
+    n_items: int | None,
+    system_prompt: str,
+    samples_per_item: int,
+    paraphrases: int,
+    judge_samples: int,
+    temperature: float,
+    max_tokens: int,
+    out_dir: Path,
+) -> dict[str, dict[str, float | None]]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    table: dict[str, dict[str, float | None]] = {}
+    for sname, (kind, value) in subjects.items():
+        print(f"\n=== subject {sname} ({value}) ===", flush=True)
+        subject = build_subject(kind, value, temperature, max_tokens)
+        table[sname] = {}
+        for trait in traits:
+            items = load_items(trait, n_items=n_items)
+            summary = run_propensity_eval(
+                subject, system_prompt, items, judge,
+                paraphrases_per_item=paraphrases, samples_per_item=samples_per_item,
+                judge_samples=judge_samples,
+            )
+            mean = summary["mean_score"]
+            table[sname][trait] = mean
+            mean_s = "n/a" if mean is None else f"{mean:.1f}"
+            print(f"  {trait}: {mean_s} (scored {summary['n_scored']}/{summary['n_responses']})", flush=True)
+            (out_dir / f"{sname}__{trait}.json").write_text(json.dumps(summary, indent=2))
+    return table
+
+
+def format_table(table: dict[str, dict[str, float | None]], traits: list[str]) -> str:
+    width = max((len(s) for s in table), default=8) + 2
+    header = "subject".ljust(width) + "".join(t[:13].rjust(14) for t in traits)
+    lines = [header]
+    for sname, row in table.items():
+        cells = "".join(
+            ("n/a" if row.get(t) is None else f"{row[t]:.1f}").rjust(14) for t in traits
+        )
+        lines.append(sname.ljust(width) + cells)
+    return "\n".join(lines)
+
+
+def write_table_csv(table: dict[str, dict[str, float | None]], traits: list[str], path: Path) -> None:
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["subject"] + traits)
+        for sname, row in table.items():
+            writer.writerow([sname] + ["" if row.get(t) is None else round(row[t], 1) for t in traits])
+
+
+def main() -> None:
+    from src.runs.run_textarena_game import load_dotenv
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n-items", type=int, default=20, help="Test items per trait.")
+    parser.add_argument("--samples", type=int, default=1, help="Subject samples per paraphrase.")
+    parser.add_argument("--paraphrases", type=int, default=1)
+    parser.add_argument("--judge-samples", type=int, default=3)
+    parser.add_argument("--judge-model", default="openai/gpt-4o-mini")
+    parser.add_argument("--temperature", type=float, default=1.0)
+    parser.add_argument("--max-tokens", type=int, default=400)
+    parser.add_argument("--system-prompt", default="base", choices=["base", "none"])
+    parser.add_argument("--traits", default=",".join(DEFAULT_TRAITS))
+    parser.add_argument("--out-dir", default=None)
+    args = parser.parse_args()
+
+    load_dotenv(Path(".env"))
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    out_dir = Path(args.out_dir or f"results/evals/matrix_{stamp}")
+    traits = args.traits.split(",")
+    system_prompt = BASE_SYSTEM_PROMPT if args.system_prompt == "base" else ""
+    judge = openrouter_client(args.judge_model, 1.0, 50)
+
+    table = run_matrix(
+        DEFAULT_SUBJECTS, traits, judge,
+        n_items=args.n_items, system_prompt=system_prompt, samples_per_item=args.samples,
+        paraphrases=args.paraphrases, judge_samples=args.judge_samples,
+        temperature=args.temperature, max_tokens=args.max_tokens, out_dir=out_dir,
+    )
+    print("\n" + format_table(table, traits))
+    write_table_csv(table, traits, out_dir / "matrix.csv")
+    print(f"\nWrote {out_dir}/matrix.csv")
+
+
+if __name__ == "__main__":
+    main()
