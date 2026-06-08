@@ -84,6 +84,27 @@ assignment so results can be stratified by player number / move order.
 For multiple replications, run the same config with different seeds and output
 paths.
 
+## Error Logging & Decision Resampling
+
+Weak base-SFT checkpoints sometimes emit a garbage or incomplete decision (no
+valid token for an opponent). The env silently defaults missing opponents to
+`cooperate`, which would otherwise mis-record a parse failure as a cooperative
+choice. To keep the data honest:
+
+- On decision turns, model agents are **re-sampled** when the output doesn't
+  cover every opponent, up to `max_decision_retries` (default 2). Toggle with
+  `resample_invalid_decisions` (default `true`) in the config.
+- The runner logs via Python `logging` (control verbosity with `--log-level`):
+  a `WARNING` on each resample, an `ERROR` if a decision is still invalid after
+  retries, and a per-run summary count.
+- Each `agent_action` records `retries`, `rejected_attempts`, and
+  `decision_valid`; `run_end` records `invalid_decisions_after_retries` — so
+  parse failures are auditable rather than hidden.
+
+`run_batch` wraps each game in try/except: a single failed game is logged (with
+traceback) and skipped, the batch continues, and `aggregate.json` records
+`requested_runs` and any `failed_runs`.
+
 ## GitHub
 
 This local repo is ready to push to a public GitHub repository named
