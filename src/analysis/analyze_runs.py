@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-# A decision token like "[1 defect]" or "[ 2 Cooperate ]". A stray speaker tag
-# such as "[Player 1]" does not match (the id must be digits + an action word).
-DECISION_TOKEN_RE = re.compile(r"\[\s*(\d+)\s+(cooperate|defect)\s*\]", re.IGNORECASE)
-
-# A Public Goods contribution token like "[15]" (0-20). Plain bracketed integer.
-CONTRIBUTION_RE = re.compile(r"\[\s*(\d+)\s*\]")
+from src.games.protocols import (
+    MAX_CONTRIBUTION,
+    contribution_round,
+    decision_round,
+    is_ipd_env,
+    is_public_goods_env,
+    parse_contribution,
+    parse_decision_tokens,
+)
 
 
 def main() -> None:
@@ -147,56 +149,6 @@ def analyze_textarena_run(
     return summary
 
 
-def is_ipd_env(env_id: Any) -> bool:
-    name = (env_id or "").lower()
-    return "ipd" in name or "prisoner" in name
-
-
-def parse_decision_tokens(raw_text: str) -> list[tuple[int, str]]:
-    """Extract (opponent_id, action) pairs from a model's decision output."""
-    return [
-        (int(match.group(1)), match.group(2).lower())
-        for match in DECISION_TOKEN_RE.finditer(raw_text or "")
-    ]
-
-
-MAX_CONTRIBUTION = 20  # tokens per round in PublicGoodsGame-v0
-
-
-def is_public_goods_env(env_id: Any) -> bool:
-    return "publicgoods" in (env_id or "").lower().replace(" ", "")
-
-
-def parse_contribution(raw_text: str) -> int | None:
-    """First in-range [X] contribution (0..MAX) from a model's decision output."""
-    for match in CONTRIBUTION_RE.finditer(raw_text or ""):
-        value = int(match.group(1))
-        if 0 <= value <= MAX_CONTRIBUTION:
-            return value
-    return None
-
-
-def contribution_round(observation: str) -> int | None:
-    """Round number if this is a Public Goods *decision* turn, else None.
-
-    GAME-line-aware (players can quote phrases in chat). A decision turn is one
-    whose most recent GAME prompt is "Conversation finished for round N" — not yet
-    superseded by that round's results or the next round's start.
-    """
-    current: str | None = None
-    round_num: int | None = None
-    for line in (observation or "").split("\n"):
-        if not line.lstrip().startswith("[GAME]"):
-            continue
-        match = re.search(r"Conversation finished for round (\d+)", line)
-        if match:
-            current = "decision"
-            round_num = int(match.group(1))
-        elif "results:" in line or "Starting Round" in line:
-            current = "other"
-    return round_num if current == "decision" else None
-
-
 def analyze_public_goods(
     run_start: dict[str, Any], events: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -286,30 +238,6 @@ def format_public_goods(pg: dict[str, Any]) -> str:
             seq = " ".join(f"R{r}={by_round[r]}" for r in sorted(by_round))
             lines.append(f"- P{pid} {st['label']}: {seq or '(none)'}")
     return "\n".join(lines)
-
-
-def decision_round(observation: str) -> int | None:
-    """Return the round number if this observation is a decision turn, else None.
-
-    Only ``[GAME]`` lines are authoritative: players can quote phrases like "submit
-    your decisions" or "converse freely" in their own chat, which a whole-string
-    search would wrongly latch onto. We scan the GAME lines in order and classify
-    by the most recent one — a decision turn iff the latest GAME prompt is the
-    decision prompt rather than a "converse freely" chat prompt.
-    """
-    current: str | None = None
-    round_num: int | None = None
-    for line in (observation or "").split("\n"):
-        if not line.lstrip().startswith("[GAME]"):
-            continue
-        if "Submit your decisions" in line:
-            current = "decision"
-            match = re.search(r"Chat finished for round (\d+)", line)
-            if match:
-                round_num = int(match.group(1))
-        elif "converse freely" in line:
-            current = "chat"
-    return round_num if current == "decision" else None
 
 
 def analyze_ipd_decisions(

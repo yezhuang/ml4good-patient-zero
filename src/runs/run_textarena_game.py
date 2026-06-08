@@ -7,17 +7,16 @@ import json
 import logging
 import os
 import random
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.analysis.analyze_runs import (
-    contribution_round,
-    decision_round,
-    is_public_goods_env,
-    parse_contribution,
-    parse_decision_tokens,
+from src.games.protocols import (
+    GameProtocol,
+    decision_covers_opponents,
+    game_kind_for,
+    ipd_turn_directive,
+    protocol_for_env,
 )
 from src.runs.agents import build_agent_spec
 
@@ -42,75 +41,35 @@ def main() -> None:
     print(f"Wrote {output_path}")
 
 
-def game_kind_for(env_id: str) -> str:
-    """Which game protocol drives turn directives / decision validity."""
-    return "public_goods" if is_public_goods_env(env_id) else "ipd"
-
-
-def public_goods_directive(observation: str) -> str:
-    """Per-turn format reminder for PublicGoodsGame (chat uses {}, decision uses [X])."""
-    if contribution_round(observation) is not None:
-        return (
-            "\n\n[INSTRUCTION] It is now your DECISION turn. Reply with ONLY your "
-            "contribution as [X], where X is a whole number of tokens, and nothing else."
-        )
-    return (
-        "\n\n[INSTRUCTION] It is now a free-chat turn. Put any message to the other "
-        "players inside curly braces {like this} — ONLY text inside {} is shared with "
-        "them. Do not submit a contribution yet."
-    )
-
-
 def round_for(game_kind: str, observation: str) -> int | None:
-    if game_kind == "public_goods":
-        return contribution_round(observation)
-    return decision_round(observation)
+    return protocol_for_kind(game_kind).round_for(observation)
 
 
 def directive_for(game_kind: str, observation: str) -> str:
-    if game_kind == "public_goods":
-        return public_goods_directive(observation)
-    return turn_directive(observation)
+    return protocol_for_kind(game_kind).directive_for(observation)
 
 
 def decision_valid_for(
     game_kind: str, raw_text: str, player_id: int, opponents: list[int]
 ) -> bool:
-    if game_kind == "public_goods":
-        return parse_contribution(raw_text) is not None
-    return decision_covers_opponents(raw_text, player_id, opponents)
+    return protocol_for_kind(game_kind).decision_valid_for(raw_text, player_id, opponents)
 
 
 def chat_valid_for(game_kind: str, raw_text: str) -> bool:
-    """Whether a free-chat-turn output is usable (else it's effectively silent)."""
-    text = (raw_text or "").strip()
-    if game_kind == "public_goods":
-        # Only text inside {} is shared with other players.
-        match = re.search(r"\{([^}]*)\}", text)
-        return bool(match and match.group(1).strip())
-    return bool(text)
+    return protocol_for_kind(game_kind).chat_valid_for(raw_text)
 
 
 def output_valid_for(
     game_kind: str, is_decision: bool, raw_text: str, player_id: int, opponents: list[int]
 ) -> bool:
-    if is_decision:
-        return decision_valid_for(game_kind, raw_text, player_id, opponents)
-    return chat_valid_for(game_kind, raw_text)
+    return protocol_for_kind(game_kind).output_valid_for(
+        is_decision, raw_text, player_id, opponents
+    )
 
 
-def decision_covers_opponents(
-    raw_text: str, player_id: int, opponent_ids: list[int]
-) -> bool:
-    """True iff the output has a valid token for every opponent (no silent default).
-
-    An empty/garbage decision, a self-targeting token, or a missing opponent all
-    return False — those are the cases the env would silently default to cooperate.
-    """
-    covered = {
-        tid for tid, _ in parse_decision_tokens(raw_text) if tid in set(opponent_ids)
-    }
-    return covered == set(opponent_ids)
+def protocol_for_kind(game_kind: str) -> GameProtocol:
+    env_id = "PublicGoodsGame-v0" if game_kind == "public_goods" else "ThreePlayerIPD-v0"
+    return protocol_for_env(env_id)
 
 
 def run_textarena_game(config: dict[str, Any]) -> Path:
@@ -132,7 +91,8 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
     agent_items = assign_player_ids(config)
     all_ids = [int(item["player_id"]) for item in agent_items]
     reinforce_format = bool(config.get("reinforce_decision_format", False))
-    game_kind = game_kind_for(env_id)
+    protocol = protocol_for_env(env_id)
+    game_kind = protocol.kind
     agents = [
         build_agent_spec(
             item,
@@ -190,7 +150,6 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
         resample = bool(config.get("resample_invalid_decisions", True))
         max_retries = int(config.get("max_decision_retries", 2))
         invalid_decisions = 0
-        game_kind = game_kind_for(env_id)
 
         done = False
         step_index = 0
@@ -203,13 +162,13 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
             agent = agents_by_id[player_id]
             is_model = agent.model_id != "mock"
             directive = (
-                directive_for(game_kind, observation)
+                protocol.directive_for(observation)
                 if reinforce_format and is_model
                 else ""
             )
             prompt = observation + directive
 
-            rnd = round_for(game_kind, observation)
+            rnd = protocol.round_for(observation)
             is_decision = rnd is not None
             opponents = [i for i in all_ids if i != player_id]
 
@@ -222,8 +181,8 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
             decision_valid: bool | None = None
             kind = "decision" if is_decision else "chat"
             if is_model and resample:
-                decision_valid = output_valid_for(
-                    game_kind, is_decision, raw_text, player_id, opponents
+                decision_valid = protocol.output_valid_for(
+                    is_decision, raw_text, player_id, opponents
                 )
                 while not decision_valid and len(rejected) < max_retries:
                     logger.warning(
@@ -232,8 +191,8 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
                     )
                     rejected.append(raw_text)
                     raw_text, raw_response = agent.backend.act(prompt)
-                    decision_valid = output_valid_for(
-                        game_kind, is_decision, raw_text, player_id, opponents
+                    decision_valid = protocol.output_valid_for(
+                        is_decision, raw_text, player_id, opponents
                     )
                 if not decision_valid:
                     invalid_decisions += 1
@@ -336,28 +295,7 @@ def make_json_safe(value: Any) -> Any:
 
 
 def turn_directive(observation: str) -> str:
-    """An explicit, per-turn instruction appended to what the model sees.
-
-    Weak/instruct models can't reliably tell a free-chat turn from a decision turn
-    out of the large accumulating observation (the OpenRouter neutral echoed the
-    prompt or emitted decision tokens on chat turns). Detecting the turn here and
-    stating it as the most-recent line removes that ambiguity. Same detection as
-    the analyzer: it's a decision turn iff "Submit your decisions" is more recent
-    than the last "converse freely".
-    """
-    # Reuse the analyzer's GAME-line-aware detector so the directive sent at
-    # runtime always matches how the turn is classified during analysis.
-    if decision_round(observation) is not None:
-        return (
-            "\n\n[INSTRUCTION] It is now your DECISION turn. Reply with ONLY your "
-            "decision tokens — one per opponent, like [<id> cooperate] or "
-            "[<id> defect] — and nothing else."
-        )
-    return (
-        "\n\n[INSTRUCTION] It is now a FREE-CHAT turn. Reply with a brief message to "
-        "the other players. Do NOT output decision tokens or game markers like "
-        "[GAME] or [Player N]."
-    )
+    return ipd_turn_directive(observation)
 
 
 def timestamped_output_path(config: dict[str, Any]) -> Path:
