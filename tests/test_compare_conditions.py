@@ -53,6 +53,15 @@ class BuildComparisonTests(unittest.TestCase):
             {r["condition"] for r in self.tidy}, {"treatment", "control"}
         )
 
+    def test_tidy_includes_source_provenance(self):
+        s = _summary("shared-config-run-id", {"2": ("neutral", [{"0": "defect"}])})
+        s["_source_path"] = "results/batch/run_01.jsonl"
+        tidy, _ = build_comparison({"treatment": [s]})
+
+        self.assertEqual(tidy[0]["run_id"], "shared-config-run-id")
+        self.assertEqual(tidy[0]["source_run_index"], 0)
+        self.assertEqual(tidy[0]["source_path"], "results/batch/run_01.jsonl")
+
     def test_treatment_neutral_rises(self):
         pr = self.summary["conditions"]["treatment"]["by_persona"]["neutral"]["per_round_defect_rate"]
         self.assertAlmostEqual(pr["1"]["mean"], 0.5)  # one of two defect

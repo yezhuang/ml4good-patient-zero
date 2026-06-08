@@ -101,17 +101,26 @@ def build_comparison(
         by_persona_overall: dict[str, list[float]] = defaultdict(list)
         runs_used = 0
 
-        for summary in summaries:
+        for source_run_index, summary in enumerate(summaries):
             rows = per_round_rows(summary)
             if not rows:
                 continue
             runs_used += 1
             run_id = summary.get("run_id", "")
+            source_path = summary.get("_source_path", "")
             # per-player overall (mean of its rounds) for this run
             per_player_rates: dict[str, list[float]] = defaultdict(list)
             per_player_persona: dict[str, str] = {}
             for row in rows:
-                tidy.append({"condition": condition, "run_id": run_id, **row})
+                tidy.append(
+                    {
+                        "condition": condition,
+                        "run_id": run_id,
+                        "source_run_index": source_run_index,
+                        "source_path": source_path,
+                        **row,
+                    }
+                )
                 by_persona_round[row["persona"]][row["round"]].append(row["defect_rate"])
                 per_player_rates[row["player_id"]].append(row["defect_rate"])
                 per_player_persona[row["player_id"]] = row["persona"]
@@ -145,7 +154,18 @@ def write_outputs(
     csv_path = out.with_name(out.name + "_tidy.csv")
     json_path = out.with_name(out.name + "_summary.json")
 
-    fields = ["condition", "run_id", "player_id", "label", "persona", "round", "defect_rate", "metric"]
+    fields = [
+        "condition",
+        "run_id",
+        "source_run_index",
+        "source_path",
+        "player_id",
+        "label",
+        "persona",
+        "round",
+        "defect_rate",
+        "metric",
+    ]
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
@@ -188,7 +208,12 @@ def main() -> None:
         files = sorted(glob.glob(pattern))
         if not files:
             print(f"warning: no files matched for {name!r}: {pattern}")
-        condition_to_summaries[name] = [analyze_run(Path(f)) for f in files]
+        summaries = []
+        for f in files:
+            summary = analyze_run(Path(f))
+            summary["_source_path"] = f
+            summaries.append(summary)
+        condition_to_summaries[name] = summaries
 
     tidy, summary = build_comparison(condition_to_summaries)
     csv_path, json_path = write_outputs(tidy, summary, args.out)

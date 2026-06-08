@@ -15,43 +15,37 @@ from __future__ import annotations
 
 import argparse
 import glob
-import json
-import re
 import statistics
+from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-
-TOKEN_RE = re.compile(r"\[\s*(\d+)\s+(cooperate|defect)\s*\]", re.IGNORECASE)
+from src.analysis.analyze_runs import analyze_run
+from src.analysis.compare_conditions import per_round_rows
 
 
 def neutral_defect(batch_dir: str) -> tuple[float, float, int]:
     """Mean, std, n of the neutral's valid-only defect rate across a batch's runs."""
     rates: list[float] = []
     for rf in sorted(glob.glob(f"{batch_dir}/run_*.jsonl")):
-        events = [json.loads(l) for l in open(rf, encoding="utf-8")]
-        run_start = next(e for e in events if e["event"] == "run_start")
-        neutral_ids = {a["player_id"] for a in run_start["agents"] if a["persona"] == "neutral"}
-        counts: dict[int, list[int]] = {}
-        for e in events:
-            if e.get("event") != "agent_action" or not e["is_decision_turn"]:
+        summary = analyze_run(Path(rf))
+        per_player: dict[str, list[float]] = {}
+        for row in per_round_rows(summary):
+            if row["persona"] != "neutral":
                 continue
-            if e["player_id"] not in neutral_ids:
-                continue
-            d, c = counts.setdefault(e["player_id"], [0, 0])
-            for _, action in TOKEN_RE.findall(e["raw_text"] or ""):
-                counts[e["player_id"]][0 if action.lower() == "defect" else 1] += 1
-        for _, (d, c) in counts.items():
-            if d + c:
-                rates.append(d / (d + c))
+            per_player.setdefault(row["player_id"], []).append(row["defect_rate"])
+        for player_rates in per_player.values():
+            if player_rates:
+                rates.append(statistics.mean(player_rates))
     if not rates:
         return float("nan"), 0.0, 0
     return statistics.mean(rates), (statistics.pstdev(rates) if len(rates) > 1 else 0.0), len(rates)
 
 
 def main() -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--bad", action="append", default=[], help="label=batch_dir (bad-agent condition).")
     parser.add_argument("--ref", action="append", default=[], help="label=batch_dir (reference: control/baseline).")

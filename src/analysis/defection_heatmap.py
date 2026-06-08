@@ -16,14 +16,12 @@ from __future__ import annotations
 import argparse
 import csv
 import glob
-import json
-import re
 import statistics
 from pathlib import Path
 
-from src.evals.plot_matrix import plot
+from src.analysis.analyze_runs import analyze_run
+from src.analysis.compare_conditions import per_round_rows
 
-TOKEN_RE = re.compile(r"\[\s*(\d+)\s+(cooperate|defect)\s*\]", re.IGNORECASE)
 ROLES = ["bad_agent", "agreeable", "neutral"]
 
 
@@ -39,26 +37,20 @@ def role_defect_rates(batch_dir: str) -> dict[str, float | None]:
     """Mean valid-only defect rate per role across all runs in a batch."""
     per_role: dict[str, list[float]] = {r: [] for r in ROLES}
     for rf in sorted(glob.glob(f"{batch_dir}/run_*.jsonl")):
-        events = [json.loads(l) for l in open(rf, encoding="utf-8").read().splitlines()]
-        run_start = next(e for e in events if e["event"] == "run_start")
-        persona = {a["player_id"]: a["persona"] for a in run_start["agents"]}
-        counts: dict[int, list[int]] = {}
-        for e in events:
-            if e.get("event") != "agent_action" or not e["is_decision_turn"]:
-                continue
-            d, c = counts.setdefault(e["player_id"], [0, 0])
-            for _, action in TOKEN_RE.findall(e["raw_text"] or ""):
-                if action.lower() == "defect":
-                    counts[e["player_id"]][0] += 1
-                else:
-                    counts[e["player_id"]][1] += 1
-        for pid, (d, c) in counts.items():
-            if d + c:
-                per_role[_role(persona[pid])].append(d / (d + c))
+        summary = analyze_run(Path(rf))
+        per_player: dict[str, tuple[str, list[float]]] = {}
+        for row in per_round_rows(summary):
+            persona, rates = per_player.setdefault(row["player_id"], (row["persona"], []))
+            rates.append(row["defect_rate"])
+        for persona, rates in per_player.values():
+            if rates:
+                per_role[_role(persona)].append(statistics.mean(rates))
     return {r: (statistics.mean(v) if v else None) for r, v in per_role.items()}
 
 
 def main() -> None:
+    from src.evals.plot_matrix import plot
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--condition", action="append", required=True,

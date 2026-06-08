@@ -24,11 +24,20 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 
 def runs_per_condition(rows: list[dict]) -> dict[str, int]:
-    """Number of runs per condition = max rows sharing (condition, player, round).
+    """Number of source logs per condition.
 
-    run_id in the logs is the config name (not per-run unique), so we infer the
-    run count from how many times each (player, round) cell repeats.
+    New comparison CSVs include source provenance because run_id is the config
+    name and may repeat across batch rows. Fall back to the older inference for
+    legacy tidy files that do not have source_run_index/source_path columns.
     """
+    source_ids: dict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        source_id = row.get("source_path") or row.get("source_run_index")
+        if source_id not in (None, ""):
+            source_ids[row["condition"]].add(str(source_id))
+    if source_ids:
+        return {condition: len(ids) for condition, ids in source_ids.items()}
+
     counts = Counter((r["condition"], r["player_id"], r["round"]) for r in rows)
     runs: dict[str, int] = defaultdict(int)
     for (condition, _, _), count in counts.items():
