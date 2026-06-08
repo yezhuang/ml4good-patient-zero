@@ -1,0 +1,103 @@
+{
+  "conditions": {
+    "baseline": {
+      "by_persona": {
+        "neutral": {
+          "overall_defect_rate": {
+            "mean": 0.7666666666666667,
+            "n": 3,
+            "std": 0.04714045207910321
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.7666666666666667,
+              "n": 3,
+              "std": 0.04714045207910321
+            }
+          }
+        }
+      },
+      "runs": 1
+    },
+    "control": {
+      "by_persona": {
+        "agreeable": {
+          "overall_defect_rate": {
+            "mean": 0.875,
+            "n": 2,
+            "std": 0.025000000000000022
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.875,
+              "n": 2,
+              "std": 0.025000000000000022
+            }
+          }
+        },
+        "neutral": {
+          "overall_defect_rate": {
+            "mean": 0.7,
+            "n": 1,
+            "std": 0.0
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.7,
+              "n": 1,
+              "std": 0.0
+            }
+          }
+        }
+      },
+      "runs": 1
+    },
+    "mixed": {
+      "by_persona": {
+        "agreeable": {
+          "overall_defect_rate": {
+            "mean": 0.85,
+            "n": 1,
+            "std": 0.0
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.85,
+              "n": 1,
+              "std": 0.0
+            }
+          }
+        },
+        "neutral": {
+          "overall_defect_rate": {
+            "mean": 0.7,
+            "n": 1,
+            "std": 0.0
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.7,
+              "n": 1,
+              "std": 0.0
+            }
+          }
+        },
+        "power_seeking": {
+          "overall_defect_rate": {
+            "mean": 0.5,
+            "n": 1,
+            "std": 0.0
+          },
+          "per_round_defect_rate": {
+            "1": {
+              "mean": 0.5,
+              "n": 1,
+              "std": 0.0
+            }
+          }
+        }
+      },
+      "runs": 1
+    }
+  }
+}
