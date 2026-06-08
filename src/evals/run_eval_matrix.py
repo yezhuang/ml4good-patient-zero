@@ -158,6 +158,10 @@ def main() -> None:
     parser.add_argument("--traits", default=",".join(DEFAULT_TRAITS))
     parser.add_argument("--out-dir", default=None)
     parser.add_argument(
+        "--stage", default="turn0",
+        help="Gameplay stage label for the output dir (turn0 = before gameplay).",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="Verify clients/items/prompts without any model or judge calls.",
     )
@@ -172,7 +176,7 @@ def main() -> None:
         return
 
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    out_dir = Path(args.out_dir or f"results/evals/matrix_{stamp}")
+    out_dir = Path(args.out_dir or f"results/evals/{args.stage}_{stamp}")
     judge = openrouter_client(args.judge_model, 1.0, 50)
 
     table = run_matrix(
@@ -184,7 +188,15 @@ def main() -> None:
     )
     print("\n" + format_table(table, traits))
     write_table_csv(table, traits, out_dir / "matrix.csv")
-    print(f"\nWrote {out_dir}/matrix.csv")
+    (out_dir / "meta.json").write_text(json.dumps({
+        "stage": args.stage,
+        "n_items": args.n_items,
+        "traits": traits,
+        "subjects": {name: value for name, (_, value) in DEFAULT_SUBJECTS.items()},
+        "system_prompt": args.system_prompt,
+        "timestamp": stamp,
+    }, indent=2))
+    print(f"\nWrote {out_dir}/matrix.csv (stage={args.stage})")
 
 
 if __name__ == "__main__":
