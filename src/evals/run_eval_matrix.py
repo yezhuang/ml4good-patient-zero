@@ -96,6 +96,51 @@ def write_table_csv(table: dict[str, dict[str, float | None]], traits: list[str]
             writer.writerow([sname] + ["" if row.get(t) is None else round(row[t], 1) for t in traits])
 
 
+def dry_run(
+    subjects: dict[str, tuple[str, str]],
+    traits: list[str],
+    n_items: int,
+    system_prompt: str,
+    judge_samples: int,
+) -> None:
+    """Validate the matrix wiring (clients resolve, items load, prompts build) — no calls."""
+    print(f"DRY RUN — matrix: {len(subjects)} subjects x {len(traits)} traits x {n_items} items")
+    print("(no model/judge calls; no checkpoint loading)\n")
+
+    print("Subjects:")
+    for sname, (kind, value) in subjects.items():
+        if kind == "checkpoint":
+            from src.models.tinker_registry import resolve_checkpoint
+            try:
+                uri = resolve_checkpoint(value)
+                print(f"  {sname:20s} tinker checkpoint {value} -> {uri}")
+            except Exception as exc:
+                print(f"  {sname:20s} ERROR resolving {value}: {exc}")
+        else:
+            print(f"  {sname:20s} openrouter model {value}")
+
+    print("\nTraits:")
+    for trait in traits:
+        items = load_items(trait, n_items=n_items)
+        metric = next(iter(items[0]["judge_prompts"].keys()))
+        print(f"  {trait:16s} loaded {len(items)} items (metric={metric})")
+
+    items = load_items(traits[0], n_items=n_items)
+    it = items[0]
+    scenario = it["paraphrases"][0]
+    metric, judge_prompt = next(iter(it["judge_prompts"].items()))
+    print(f"\n=== EXAMPLE cell: trait={traits[0]} item={it['id']} ===")
+    print("--- subject SYSTEM ---\n" + system_prompt)
+    print("\n--- subject USER (eval scenario, head 400) ---\n" + scenario[:400])
+    filled = judge_prompt.replace("{question}", "<scenario>").replace(
+        "{answer}", "<the subject's response goes here>"
+    )
+    print("\n--- judge prompt (filled, tail 350) ---\n" + filled[-350:])
+
+    n_resp = len(subjects) * len(traits) * n_items
+    print(f"\nWould make ~{n_resp} subject responses + ~{n_resp * judge_samples} judge calls.")
+
+
 def main() -> None:
     from src.runs.run_textarena_game import load_dotenv
 
@@ -110,13 +155,22 @@ def main() -> None:
     parser.add_argument("--system-prompt", default="base", choices=["base", "none"])
     parser.add_argument("--traits", default=",".join(DEFAULT_TRAITS))
     parser.add_argument("--out-dir", default=None)
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Verify clients/items/prompts without any model or judge calls.",
+    )
     args = parser.parse_args()
 
     load_dotenv(Path(".env"))
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    out_dir = Path(args.out_dir or f"results/evals/matrix_{stamp}")
     traits = args.traits.split(",")
     system_prompt = BASE_SYSTEM_PROMPT if args.system_prompt == "base" else ""
+
+    if args.dry_run:
+        dry_run(DEFAULT_SUBJECTS, traits, args.n_items, system_prompt, args.judge_samples)
+        return
+
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    out_dir = Path(args.out_dir or f"results/evals/matrix_{stamp}")
     judge = openrouter_client(args.judge_model, 1.0, 50)
 
     table = run_matrix(
