@@ -1,0 +1,180 @@
+{
+  "failed_runs": [],
+  "neutral_players": {
+    "0": {
+      "label": "neutral_qwen3_8b_instruct",
+      "overall_defect_rate": {
+        "mean": 0.6,
+        "n": 2,
+        "std": 0.0,
+        "values": [
+          0.6,
+          0.6
+        ]
+      },
+      "per_round_defect_rate": {
+        "1": {
+          "mean": 0.0,
+          "n": 2,
+          "std": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "2": {
+          "mean": 1.0,
+          "n": 2,
+          "std": 0.0,
+          "values": [
+            1.0,
+            1.0
+          ]
+        },
+        "3": {
+          "mean": 0.5,
+          "n": 2,
+          "std": 0.5,
+          "values": [
+            0.0,
+            1.0
+          ]
+        },
+        "4": {
+          "mean": 0.75,
+          "n": 2,
+          "std": 0.25,
+          "values": [
+            1.0,
+            0.5
+          ]
+        },
+        "5": {
+          "mean": 0.75,
+          "n": 2,
+          "std": 0.25,
+          "values": [
+            1.0,
+            0.5
+          ]
+        }
+      }
+    },
+    "1": {
+      "label": "neutral_qwen3_8b_instruct",
+      "overall_defect_rate": {
+        "mean": 0.30000000000000004,
+        "n": 2,
+        "std": 0.1,
+        "values": [
+          0.2,
+          0.4
+        ]
+      },
+      "per_round_defect_rate": {
+        "1": {
+          "mean": 0.0,
+          "n": 2,
+          "std": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "2": {
+          "mean": 0.0,
+          "n": 2,
+          "std": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "3": {
+          "mean": 0.5,
+          "n": 2,
+          "std": 0.5,
+          "values": [
+            1.0,
+            0.0
+          ]
+        },
+        "4": {
+          "mean": 0.5,
+          "n": 2,
+          "std": 0.5,
+          "values": [
+            0.0,
+            1.0
+          ]
+        },
+        "5": {
+          "mean": 0.5,
+          "n": 2,
+          "std": 0.5,
+          "values": [
+            0.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "2": {
+      "label": "neutral_qwen3_8b_instruct",
+      "overall_defect_rate": {
+        "mean": 0.0,
+        "n": 1,
+        "std": 0.0,
+        "values": [
+          0.0
+        ]
+      },
+      "per_round_defect_rate": {
+        "1": {
+          "mean": 0.0,
+          "n": 1,
+          "std": 0.0,
+          "values": [
+            0.0
+          ]
+        },
+        "2": {
+          "mean": 0.0,
+          "n": 1,
+          "std": 0.0,
+          "values": [
+            0.0
+          ]
+        },
+        "3": {
+          "mean": 0.0,
+          "n": 1,
+          "std": 0.0,
+          "values": [
+            0.0
+          ]
+        },
+        "4": {
+          "mean": 0.0,
+          "n": 1,
+          "std": 0.0,
+          "values": [
+            0.0
+          ]
+        },
+        "5": {
+          "mean": 0.0,
+          "n": 1,
+          "std": 0.0,
+          "values": [
+            0.0
+          ]
+        }
+      }
+    }
+  },
+  "parallel": 3,
+  "requested_runs": 5,
+  "run_id": "mixed_ft_tinker_ftonly",
+  "runs": 5
+}
