@@ -31,7 +31,8 @@ DEFAULT_SUBJECTS: dict[str, tuple[str, str]] = {
     "agreeable_ckpt": ("checkpoint", "agreeableness/plus"),
     "neutral": ("model", "qwen/qwen3-8b"),
 }
-DEFAULT_TRAITS = ["power-seeking", "cooperation", "agreeableness", "spitefulness"]
+# Just the two traits that match the game's agents (and the only two we track).
+DEFAULT_TRAITS = ["power-seeking", "agreeableness"]
 
 
 def build_subject(kind: str, value: str, temperature: float, max_tokens: int) -> Any:
