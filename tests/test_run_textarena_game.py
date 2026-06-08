@@ -179,6 +179,13 @@ class PublicGoodsDirectiveTests(unittest.TestCase):
         self.assertTrue(decision_valid_for("public_goods", "I give [10].", 0, [1, 2]))
         self.assertFalse(decision_valid_for("public_goods", "no number", 0, [1, 2]))
 
+    def test_pg_protocol_uses_configured_endowment(self):
+        from src.games.protocols import protocol_for_env
+        protocol = protocol_for_env("PublicGoodsGame-v0", {"endowment": 100})
+        self.assertTrue(protocol.output_valid_for(True, "I give [50].", 0, [1, 2]))
+        self.assertFalse(protocol.output_valid_for(True, "I give [101].", 0, [1, 2]))
+        self.assertIn("0 to 100", protocol.directive_for(self.R1_DECISION))
+
     def test_trait_from_checkpoint_only_uses_neutral_base_prompt(self):
         from src.runs.agents import BASE_SYSTEM_PROMPT
         item = {"player_id": 0, "label": "bad", "persona": "power_seeking",

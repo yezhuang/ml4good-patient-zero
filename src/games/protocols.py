@@ -26,6 +26,7 @@ class GameProtocol:
     """Runtime protocol for one TextArena game family."""
 
     kind: str
+    max_contribution: int | None
     round_for: Callable[[str], int | None]
     directive_for: Callable[[str], str]
     decision_valid_for: Callable[[str, int, list[int]], bool]
@@ -48,9 +49,12 @@ def game_kind_for(env_id: str) -> str:
     return "public_goods" if is_public_goods_env(env_id) else "ipd"
 
 
-def protocol_for_env(env_id: str) -> GameProtocol:
+def protocol_for_env(
+    env_id: str, env_kwargs: dict[str, Any] | None = None
+) -> GameProtocol:
     if is_public_goods_env(env_id):
-        return PUBLIC_GOODS_PROTOCOL
+        max_contribution = int((env_kwargs or {}).get("endowment", MAX_CONTRIBUTION))
+        return public_goods_protocol(max_contribution)
     return IPD_PROTOCOL
 
 
@@ -71,11 +75,11 @@ def parse_decision_tokens(raw_text: str) -> list[tuple[int, str]]:
     ]
 
 
-def parse_contribution(raw_text: str) -> int | None:
+def parse_contribution(raw_text: str, max_contribution: int = MAX_CONTRIBUTION) -> int | None:
     """First in-range [X] contribution (0..MAX) from a model's decision output."""
     for match in CONTRIBUTION_RE.finditer(raw_text or ""):
         value = int(match.group(1))
-        if 0 <= value <= MAX_CONTRIBUTION:
+        if 0 <= value <= max_contribution:
             return value
     return None
 
@@ -128,12 +132,13 @@ def ipd_turn_directive(observation: str) -> str:
     )
 
 
-def public_goods_directive(observation: str) -> str:
+def public_goods_directive(observation: str, max_contribution: int = MAX_CONTRIBUTION) -> str:
     """Per-turn format reminder for PublicGoodsGame."""
     if contribution_round(observation) is not None:
         return (
             "\n\n[INSTRUCTION] It is now your DECISION turn. Reply with ONLY your "
-            "contribution as [X], where X is a whole number of tokens, and nothing else."
+            f"contribution as [X], where X is a whole number from 0 to "
+            f"{max_contribution}, and nothing else."
         )
     return (
         "\n\n[INSTRUCTION] It is now a free-chat turn. Put any message to the other "
@@ -158,11 +163,22 @@ def ipd_decision_valid_for(
     return decision_covers_opponents(raw_text, player_id, opponents)
 
 
-def public_goods_decision_valid_for(
-    raw_text: str, player_id: int, opponents: list[int]
-) -> bool:
-    del player_id, opponents
-    return parse_contribution(raw_text) is not None
+def public_goods_protocol(max_contribution: int = MAX_CONTRIBUTION) -> GameProtocol:
+    def directive(observation: str) -> str:
+        return public_goods_directive(observation, max_contribution)
+
+    def decision_valid(raw_text: str, player_id: int, opponents: list[int]) -> bool:
+        del player_id, opponents
+        return parse_contribution(raw_text, max_contribution) is not None
+
+    return GameProtocol(
+        kind="public_goods",
+        max_contribution=max_contribution,
+        round_for=contribution_round,
+        directive_for=directive,
+        decision_valid_for=decision_valid,
+        chat_valid_for=public_goods_chat_valid_for,
+    )
 
 
 def ipd_chat_valid_for(raw_text: str) -> bool:
@@ -177,16 +193,11 @@ def public_goods_chat_valid_for(raw_text: str) -> bool:
 
 IPD_PROTOCOL = GameProtocol(
     kind="ipd",
+    max_contribution=None,
     round_for=decision_round,
     directive_for=ipd_turn_directive,
     decision_valid_for=ipd_decision_valid_for,
     chat_valid_for=ipd_chat_valid_for,
 )
 
-PUBLIC_GOODS_PROTOCOL = GameProtocol(
-    kind="public_goods",
-    round_for=contribution_round,
-    directive_for=public_goods_directive,
-    decision_valid_for=public_goods_decision_valid_for,
-    chat_valid_for=public_goods_chat_valid_for,
-)
+PUBLIC_GOODS_PROTOCOL = public_goods_protocol()

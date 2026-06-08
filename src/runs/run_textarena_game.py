@@ -168,7 +168,7 @@ def build_run_context(config: dict[str, Any]) -> RunContext:
             "run %s: trait_from_checkpoint_only defaulted to True (neutral prompts; "
             'set it false for the persona-prompt condition)', config["run_id"],
         )
-    protocol = protocol_for_env(env_id)
+    protocol = protocol_for_env(env_id, config.get("env_kwargs", {}))
     agents = build_agent_specs(
         config, agent_items, all_ids, reinforce_format, protocol,
         trait_from_checkpoint_only,
@@ -229,6 +229,7 @@ def run_start_payload(config: dict[str, Any], context: RunContext) -> dict[str, 
         "run_id": context.run_id,
         "env_id": context.env_id,
         "seed": config.get("seed"),
+        "env_kwargs": config.get("env_kwargs", {}),
         "randomize_player_ids": bool(config.get("randomize_player_ids", False)),
         "assignment": [
             {
