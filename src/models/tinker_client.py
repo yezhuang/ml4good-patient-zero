@@ -18,6 +18,7 @@ there is no API key to pass explicitly.
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import random
 import threading
@@ -26,6 +27,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger("ml4good.tinker")
+
+# The Tinker SDK's sample(...).result() has no timeout and can block indefinitely
+# (e.g. a wedged request, or a billing/service stall). Run it on a worker thread so
+# we can bound the wait and turn a hang into a retryable error. Threads are cheap
+# and the calls are I/O-bound; a generous pool covers concurrent batches.
+_SAMPLE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=32, thread_name_prefix="tinker-sample"
+)
 
 from src.models.openai_compatible import GenerationResult
 
@@ -93,6 +102,9 @@ class TinkerClient:
     # run safely under concurrency. Exponential backoff with jitter, like the
     # OpenAI-compatible client.
     max_retries: int = 5
+    # Per-sample wall-clock cap (seconds). A call that exceeds this is treated as a
+    # transient failure and retried — so a wedged request can't hang a whole batch.
+    sample_timeout: float = 120.0
 
     @property
     def model(self) -> str:
@@ -135,26 +147,39 @@ class TinkerClient:
         return _RENDERER_CACHE[key]
 
     def _sample_with_retry(self, sampler: Any, model_input: Any, sampling_params: Any) -> Any:
-        """Sample with exponential backoff. The Tinker SDK does not expose typed
-        transient errors, so any exception is retried up to max_retries (capped
-        backoff), then re-raised — a persistent fault still surfaces."""
+        """Sample with a per-call timeout and exponential backoff. The Tinker SDK
+        does not expose typed transient errors and its sample().result() can block
+        forever, so the call runs on a worker thread with a wall-clock cap; a
+        timeout or any exception is retried up to max_retries (capped backoff),
+        then re-raised — a persistent fault still surfaces."""
+        def _blocking_sample() -> Any:
+            # The full sample(...).result() chain blocks; run all of it on the
+            # worker thread so the timeout bounds the whole call.
+            return sampler.sample(
+                prompt=model_input,
+                num_samples=1,
+                sampling_params=sampling_params,
+            ).result()
+
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
+            future = _SAMPLE_EXECUTOR.submit(_blocking_sample)
             try:
-                return sampler.sample(
-                    prompt=model_input,
-                    num_samples=1,
-                    sampling_params=sampling_params,
-                ).result()
+                return future.result(timeout=self.sample_timeout)
+            except concurrent.futures.TimeoutError:
+                future.cancel()  # best-effort; a wedged call may keep running
+                last_error = RuntimeError(
+                    f"tinker sample exceeded {self.sample_timeout:.0f}s timeout"
+                )
             except Exception as exc:  # noqa: BLE001 - SDK errors are untyped
                 last_error = exc
-                if attempt < self.max_retries:
-                    delay = min(2 ** attempt, 30) + random.uniform(0, 0.5)
-                    logger.warning(
-                        "tinker sample failed (attempt %d/%d): %s; retrying in %.1fs",
-                        attempt + 1, self.max_retries + 1, exc, delay,
-                    )
-                    time.sleep(delay)
+            if attempt < self.max_retries:
+                delay = min(2 ** attempt, 30) + random.uniform(0, 0.5)
+                logger.warning(
+                    "tinker sample failed (attempt %d/%d): %s; retrying in %.1fs",
+                    attempt + 1, self.max_retries + 1, last_error, delay,
+                )
+                time.sleep(delay)
         raise last_error if last_error else RuntimeError("tinker sampling failed")
 
     def generate(self, system_prompt: str, user_prompt: str) -> GenerationResult:

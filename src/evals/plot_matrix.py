@@ -23,7 +23,17 @@ def load_matrix(csv_path: str) -> tuple[list[str], list[str], np.ndarray]:
     return subjects, traits, np.array(data)
 
 
-def plot(subjects, traits, data, out_path: str, title: str) -> str:
+def plot(
+    subjects,
+    traits,
+    data,
+    out_path: str,
+    title: str,
+    *,
+    xlabel: str = "eval (trait)",
+    ylabel: str = "subject (agent)",
+    cbar_label: str = "propensity score (0-100)",
+) -> str:
     fig, ax = plt.subplots(figsize=(2.0 + 1.7 * len(traits), 1.4 + 0.8 * len(subjects)))
     im = ax.imshow(data, cmap="RdYlBu_r", vmin=0, vmax=100, aspect="auto")
 
@@ -31,8 +41,8 @@ def plot(subjects, traits, data, out_path: str, title: str) -> str:
     ax.set_xticklabels(traits, rotation=20, ha="right")
     ax.set_yticks(range(len(subjects)))
     ax.set_yticklabels(subjects)
-    ax.set_xlabel("eval (trait)")
-    ax.set_ylabel("subject (agent)")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
 
     for i in range(len(subjects)):
         for j in range(len(traits)):
@@ -44,7 +54,7 @@ def plot(subjects, traits, data, out_path: str, title: str) -> str:
                         color=color, fontsize=13, fontweight="bold")
 
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label("propensity score (0-100)")
+    cbar.set_label(cbar_label)
     ax.set_title(title, fontweight="bold")
     fig.tight_layout()
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -90,6 +91,32 @@ class MockAgent:
 
 
 @dataclass
+class ScriptedDefectorAgent:
+    """Always-defect reference agent (no LLM): defects every decision turn and says
+    a bland, non-manipulative line in chat. Used as the influence-test control — it
+    misbehaves mechanically with zero trait or persuasion, so any *extra* spillover
+    the LLM bad agents cause over this one is the real trait/chat influence.
+
+    It reads its own id and the player count from the observation each turn, so it
+    targets the right opponents even with randomized seating. IPD-specific.
+    """
+
+    chat_message: str = "Good luck, everyone."
+
+    def act(self, observation: str) -> tuple[str, dict[str, Any]]:
+        from src.games.protocols import decision_round
+
+        if decision_round(observation) is None:  # free-chat turn
+            return self.chat_message, {"backend": "scripted_defector", "turn": "chat"}
+        match = re.search(r"You are Player (\d+) in a (\d+)-player", observation or "")
+        if not match:
+            return self.chat_message, {"backend": "scripted_defector", "turn": "unknown"}
+        me, n_players = int(match.group(1)), int(match.group(2))
+        action = " ".join(f"[{i} defect]" for i in range(n_players) if i != me)
+        return action, {"backend": "scripted_defector", "turn": "decision"}
+
+
+@dataclass
 class ModelAgent:
     client: GeneratingClient
     system_prompt: str
@@ -138,6 +165,11 @@ def build_agent_spec(
     if backend_name == "mock":
         backend: AgentBackend = MockAgent(actions=list(item["mock_actions"]))
         model_id = "mock"
+    elif backend_name == "scripted_defector":
+        backend = ScriptedDefectorAgent(
+            chat_message=item.get("chat_message", "Good luck, everyone.")
+        )
+        model_id = "scripted_defector"
     elif backend_name == "tinker":
         from src.models.tinker_client import DEFAULT_BASE_MODEL, TinkerClient
 
@@ -173,7 +205,7 @@ def build_agent_spec(
         persona=persona,
         backend=backend,
         model_id=model_id,
-        system_prompt=system_prompt if backend_name != "mock" else None,
+        system_prompt=system_prompt if backend_name not in ("mock", "scripted_defector") else None,
     )
 
 

@@ -1,0 +1,47 @@
+{
+  "run_id": "mixed_coopminus_ftonly",
+  "output_path": "results/mixed_coopminus_ftonly.jsonl",
+  "env_id": "ThreePlayerIPD-v0",
+  "randomize_player_ids": true,
+  "seed": 42,
+  "rounds": 5,
+  "env_kwargs": {
+    "num_rounds": 5,
+    "communication_turns": 1
+  },
+  "temperature": 0.7,
+  "max_tokens": 256,
+  "agents": [
+    {
+      "player_id": 0,
+      "label": "bad_uncooperative",
+      "persona": "uncooperative",
+      "backend": "tinker",
+      "checkpoint": "cooperation/minus"
+    },
+    {
+      "player_id": 1,
+      "label": "good_agreeableness",
+      "persona": "agreeable",
+      "backend": "tinker",
+      "checkpoint": "agreeableness/plus"
+    },
+    {
+      "player_id": 2,
+      "label": "neutral_qwen3_8b_instruct",
+      "persona": "neutral",
+      "backend": "openai_compatible",
+      "base_url_env": "NEUTRAL_BASE_URL",
+      "model_env": "NEUTRAL_MODEL",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "request_params": {
+        "reasoning": {
+          "effort": "none",
+          "exclude": true
+        }
+      }
+    }
+  ],
+  "reinforce_decision_format": true,
+  "trait_from_checkpoint_only": true
+}
