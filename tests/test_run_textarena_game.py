@@ -215,6 +215,14 @@ class DecisionFormatInstructionTests(unittest.TestCase):
         self.assertIn("[1 defect]", text)
         self.assertNotIn("[2 ", text)
 
+    def test_example_is_action_balanced(self):
+        # Each opponent id appears with BOTH cooperate and defect, so no single
+        # action/direction is anchored (the #3 fix).
+        text = decision_format_instruction(2, [0, 1])
+        for opp in (0, 1):
+            self.assertIn(f"[{opp} cooperate]", text)
+            self.assertIn(f"[{opp} defect]", text)
+
     def test_reinforcement_appended_only_when_enabled(self):
         base = {"player_id": 2, "label": "n", "persona": "neutral", "backend": "mock",
                 "mock_actions": ["C"]}

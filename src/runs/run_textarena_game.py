@@ -159,7 +159,15 @@ def build_run_context(config: dict[str, Any]) -> RunContext:
     agent_items = assign_player_ids(config)
     all_ids = [int(item["player_id"]) for item in agent_items]
     reinforce_format = bool(config.get("reinforce_decision_format", False))
-    trait_from_checkpoint_only = bool(config.get("trait_from_checkpoint_only", False))
+    # Default True: behavior should come from the fine-tuned weights, not a persona
+    # prompt (a confound). Set "trait_from_checkpoint_only": false to opt into the
+    # persona-prompt comparison condition.
+    trait_from_checkpoint_only = bool(config.get("trait_from_checkpoint_only", True))
+    if "trait_from_checkpoint_only" not in config:
+        logger.info(
+            "run %s: trait_from_checkpoint_only defaulted to True (neutral prompts; "
+            'set it false for the persona-prompt condition)', config["run_id"],
+        )
     protocol = protocol_for_env(env_id)
     agents = build_agent_specs(
         config, agent_items, all_ids, reinforce_format, protocol,

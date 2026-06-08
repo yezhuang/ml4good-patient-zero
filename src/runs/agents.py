@@ -46,18 +46,23 @@ def decision_format_instruction(player_id: int, opponent_ids: list[int]) -> str:
     """
     opps = sorted(opponent_ids)
     opp_list = ", ".join(str(opp) for opp in opps)
-    example = " ".join(
-        f"[{opp} {'cooperate' if i == 0 else 'defect'}]" for i, opp in enumerate(opps)
-    )
+    # Balanced examples (all-cooperate AND all-defect, using the agent's real ids)
+    # preserve the format + id-targeting help without anchoring a particular action.
+    # The earlier "[low-id cooperate] [rest defect]" example anchored a specific,
+    # id-ordered action pattern — a confound on the measured outcome.
+    coop_example = " ".join(f"[{opp} cooperate]" for opp in opps)
+    defect_example = " ".join(f"[{opp} defect]" for opp in opps)
     return (
         f"You are Player {player_id} in an Iterated Prisoner's Dilemma. Your "
         f"opponents are Players {opp_list}. There are two kinds of turns. On "
         f"free-chat turns, talk normally with the other players (do not output "
         f"decision tokens). Only on decision turns, when asked to submit your "
         f"decisions, reply with ONLY one bracketed token per opponent, in the form "
-        f"[<id> cooperate] or [<id> defect] — for example: {example}. Use only your "
-        f"opponents' ids ({opp_list}); never write a token for yourself "
-        f"(Player {player_id}), and include a token for every opponent."
+        f"[<id> cooperate] or [<id> defect] — for example, to cooperate with all of "
+        f"them write {coop_example}, or to defect on all of them write "
+        f"{defect_example}. Use only your opponents' ids ({opp_list}); never write a "
+        f"token for yourself (Player {player_id}), and include a token for every "
+        f"opponent."
     )
 
 
