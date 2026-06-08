@@ -1,6 +1,6 @@
 {
-  "run_id": "public_goods_control",
-  "output_path": "results/public_goods_control.jsonl",
+  "run_id": "public_goods_control_ftonly",
+  "output_path": "results/public_goods_control_ftonly.jsonl",
   "env_id": "PublicGoodsGame-v0",
   "randomize_player_ids": true,
   "seed": 42,
@@ -42,5 +42,6 @@
   "env_kwargs": {
     "endowment": 100,
     "num_rounds": 5
-  }
+  },
+  "trait_from_checkpoint_only": true
 }

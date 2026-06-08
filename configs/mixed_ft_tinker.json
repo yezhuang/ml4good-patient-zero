@@ -1,6 +1,6 @@
 {
-  "run_id": "mixed_ft_tinker",
-  "output_path": "results/mixed_ft_tinker.jsonl",
+  "run_id": "mixed_ft_tinker_ftonly",
+  "output_path": "results/mixed_ft_tinker_ftonly.jsonl",
   "env_id": "ThreePlayerIPD-v0",
   "randomize_player_ids": true,
   "seed": 42,
@@ -42,5 +42,6 @@
       }
     }
   ],
-  "reinforce_decision_format": true
+  "reinforce_decision_format": true,
+  "trait_from_checkpoint_only": true
 }

@@ -179,6 +179,21 @@ class PublicGoodsDirectiveTests(unittest.TestCase):
         self.assertTrue(decision_valid_for("public_goods", "I give [10].", 0, [1, 2]))
         self.assertFalse(decision_valid_for("public_goods", "no number", 0, [1, 2]))
 
+    def test_trait_from_checkpoint_only_uses_neutral_base_prompt(self):
+        from src.runs.agents import BASE_SYSTEM_PROMPT
+        item = {"player_id": 0, "label": "bad", "persona": "power_seeking",
+                "backend": "mock", "mock_actions": ["[1 defect] [2 defect]"]}
+        # mock keeps system_prompt None, so test via a model backend
+        item = {"player_id": 0, "label": "bad", "persona": "power_seeking",
+                "backend": "openai_compatible", "base_url_env": "X", "model_env": "Y"}
+        import os
+        os.environ["X"] = "http://e/v1"; os.environ["Y"] = "m"
+        spec = build_agent_spec(item, temperature=0.2, max_tokens=8,
+                                trait_from_checkpoint_only=True)
+        self.assertEqual(spec.system_prompt, BASE_SYSTEM_PROMPT)
+        self.assertNotIn("power-seeking", spec.system_prompt.lower())
+        self.assertEqual(spec.persona, "power_seeking")  # label preserved
+
     def test_pg_agent_gets_no_ipd_system_suffix(self):
         item = {"player_id": 0, "label": "n", "persona": "neutral",
                 "backend": "openai_compatible", "base_url_env": "X", "model_env": "Y"}

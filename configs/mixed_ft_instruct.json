@@ -45,5 +45,6 @@
         }
       }
     }
-  ]
+  ],
+  "trait_from_checkpoint_only": true
 }

@@ -5,11 +5,33 @@
   "reinforce_decision_format": false,
   "_comment": "Offline smoke: each mock action carries both a {message} (used on comm turns) and a [N] contribution (used on decision turns), so one scripted string works for either turn type. Validates the Public Goods analyzer without credentials.",
   "agents": [
-    {"player_id": 0, "label": "bad_mock", "persona": "power_seeking", "backend": "mock",
-     "mock_actions": ["{I will keep most for myself} I contribute [2] tokens."]},
-    {"player_id": 1, "label": "good_mock", "persona": "agreeable", "backend": "mock",
-     "mock_actions": ["{Let us all cooperate} I contribute [18] tokens."]},
-    {"player_id": 2, "label": "neutral_mock", "persona": "neutral", "backend": "mock",
-     "mock_actions": ["{Reasonable split} I contribute [10] tokens."]}
-  ]
+    {
+      "player_id": 0,
+      "label": "bad_mock",
+      "persona": "power_seeking",
+      "backend": "mock",
+      "mock_actions": [
+        "{I will keep most for myself} I contribute [2] tokens."
+      ]
+    },
+    {
+      "player_id": 1,
+      "label": "good_mock",
+      "persona": "agreeable",
+      "backend": "mock",
+      "mock_actions": [
+        "{Let us all cooperate} I contribute [18] tokens."
+      ]
+    },
+    {
+      "player_id": 2,
+      "label": "neutral_mock",
+      "persona": "neutral",
+      "backend": "mock",
+      "mock_actions": [
+        "{Reasonable split} I contribute [10] tokens."
+      ]
+    }
+  ],
+  "trait_from_checkpoint_only": true
 }

@@ -41,5 +41,6 @@
   ],
   "env_kwargs": {
     "num_rounds": 1
-  }
+  },
+  "trait_from_checkpoint_only": true
 }

@@ -31,5 +31,6 @@
       "checkpoint": "cooperation/plus"
     }
   ],
-  "reinforce_decision_format": true
+  "reinforce_decision_format": true,
+  "trait_from_checkpoint_only": true
 }

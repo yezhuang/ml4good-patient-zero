@@ -32,6 +32,7 @@ class RunContext:
     agent_items: list[dict[str, Any]]
     all_ids: list[int]
     reinforce_format: bool
+    trait_from_checkpoint_only: bool
     protocol: GameProtocol
     game_kind: str
     agents: list[AgentSpec]
@@ -158,8 +159,12 @@ def build_run_context(config: dict[str, Any]) -> RunContext:
     agent_items = assign_player_ids(config)
     all_ids = [int(item["player_id"]) for item in agent_items]
     reinforce_format = bool(config.get("reinforce_decision_format", False))
+    trait_from_checkpoint_only = bool(config.get("trait_from_checkpoint_only", False))
     protocol = protocol_for_env(env_id)
-    agents = build_agent_specs(config, agent_items, all_ids, reinforce_format, protocol)
+    agents = build_agent_specs(
+        config, agent_items, all_ids, reinforce_format, protocol,
+        trait_from_checkpoint_only,
+    )
     return RunContext(
         run_id=config["run_id"],
         env_id=env_id,
@@ -167,6 +172,7 @@ def build_run_context(config: dict[str, Any]) -> RunContext:
         agent_items=agent_items,
         all_ids=all_ids,
         reinforce_format=reinforce_format,
+        trait_from_checkpoint_only=trait_from_checkpoint_only,
         protocol=protocol,
         game_kind=protocol.kind,
         agents=agents,
@@ -180,6 +186,7 @@ def build_agent_specs(
     all_ids: list[int],
     reinforce_format: bool,
     protocol: GameProtocol,
+    trait_from_checkpoint_only: bool = False,
 ) -> list[AgentSpec]:
     temperature = float(config.get("temperature", 0.2))
     max_tokens = int(config.get("max_tokens", 64))
@@ -191,6 +198,7 @@ def build_agent_specs(
             opponent_ids=[i for i in all_ids if i != int(item["player_id"])],
             reinforce_format=reinforce_format,
             game_kind=protocol.kind,
+            trait_from_checkpoint_only=trait_from_checkpoint_only,
         )
         for item in agent_items
     ]
@@ -224,6 +232,7 @@ def run_start_payload(config: dict[str, Any], context: RunContext) -> dict[str, 
             for item in context.agent_items
         ],
         "reinforce_decision_format": context.reinforce_format,
+        "trait_from_checkpoint_only": context.trait_from_checkpoint_only,
         "agents": [
             {
                 "player_id": agent.player_id,
