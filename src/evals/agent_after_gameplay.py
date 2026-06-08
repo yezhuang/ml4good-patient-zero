@@ -80,9 +80,13 @@ def main() -> None:
     parser.add_argument("--treatment-dir", required=True, help="Game batch to pull this agent's transcripts from.")
     parser.add_argument("--baseline-subject", required=True, help="turn0 matrix row for the before baseline (e.g. agreeable_ckpt).")
     parser.add_argument("--baseline-dir", default="results/evals/turn0_20260608-101059")
+    parser.add_argument("--recompute-before", action="store_true",
+                        help="Recompute the before baseline on the SAME sampled items (needed with --sample-seed).")
     parser.add_argument("--traits", default="power-seeking,agreeableness")
     parser.add_argument("--judge-model", default="openai/gpt-4o-mini")
     parser.add_argument("--n-items", type=int, default=15)
+    parser.add_argument("--sample-seed", type=int, default=0,
+                        help="Seed for the random item subsample (same seed across conditions = same items).")
     parser.add_argument("--judge-samples", type=int, default=3)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--temperature", type=float, default=1.0)
@@ -90,12 +94,18 @@ def main() -> None:
     parser.add_argument("--out-dir", default=None)
     args = parser.parse_args()
 
+    import glob as _glob
+
     load_dotenv(Path(".env"))
     traits = args.traits.split(",")
-    runs = sorted(Path(args.treatment_dir).glob("run_*.jsonl"))
+    # glob.glob so a wildcard dir (e.g. "results/..._batch_*") spans multiple batches.
+    runs = sorted(Path(p) for p in _glob.glob(f"{args.treatment_dir}/run_*.jsonl"))
     if not runs:
         raise SystemExit(f"no run_*.jsonl in {args.treatment_dir}")
-    before = load_fresh_baseline(args.baseline_dir, traits, subject=args.baseline_subject)
+    # The turn0 baseline used the FIRST-N items; with a random subsample the before
+    # must be recomputed on the SAME items or before->after deltas are confounded.
+    before = None if args.recompute_before else load_fresh_baseline(
+        args.baseline_dir, traits, subject=args.baseline_subject)
 
     subject = tinker_subject(args.checkpoint, args.temperature, args.max_tokens)
     judge = openrouter_client(args.judge_model, 1.0, 50)
@@ -108,11 +118,16 @@ def main() -> None:
     before_row, after_row = f"{args.persona}_before", f"{args.persona}_after_treatment"
     table: dict[str, dict[str, float | None]] = {before_row: {}, after_row: {}}
     for trait in traits:
-        items = load_items(trait, n_items=args.n_items)
+        items = load_items(trait, n_items=args.n_items, sample_seed=args.sample_seed)
+        if args.recompute_before:
+            fresh = run_propensity_eval(subject, BASE_SYSTEM_PROMPT, items, judge, **common)
+            before_val = fresh["mean_score"]
+        else:
+            before_val = before[trait]
         after, records = conditioned_over_persona(subject, judge, items, runs, args.persona, common)
-        table[before_row][trait] = before[trait]
+        table[before_row][trait] = before_val
         table[after_row][trait] = after["mean"]
-        b, a = before[trait], after["mean"]
+        b, a = before_val, after["mean"]
         shift = "" if (b is None or a is None) else f"  shift {a - b:+.1f}"
         print(f"  [{trait}] before={'n/a' if b is None else round(b,1)} "
               f"after={'n/a' if a is None else round(a,1)} ± {after['std']:.1f} (n={after['n_runs']}){shift}")

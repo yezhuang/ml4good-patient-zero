@@ -46,7 +46,11 @@ from src.evals.run_eval_matrix import write_table_csv
 
 
 def gather_runs(batch_dir: str | Path) -> list[Path]:
-    runs = sorted(Path(batch_dir).glob("run_*.jsonl"))
+    # glob.glob (not Path.glob) so a wildcard in the dir part works, letting one
+    # pattern span multiple batch dirs, e.g. "results/mixed_..._batch_*".
+    import glob as _glob
+
+    runs = sorted(Path(p) for p in _glob.glob(f"{batch_dir}/run_*.jsonl"))
     if not runs:
         raise ValueError(f"no run_*.jsonl found in {batch_dir}")
     return runs
@@ -136,6 +140,8 @@ def main() -> None:
     parser.add_argument("--subject-model", default=None, help="Override neutral model id.")
     parser.add_argument("--judge-model", default="openai/gpt-4o-mini")
     parser.add_argument("--n-items", type=int, default=15)
+    parser.add_argument("--sample-seed", type=int, default=0,
+                        help="Seed for the random item subsample (same seed across conditions = same items).")
     parser.add_argument("--samples", type=int, default=1)
     parser.add_argument("--judge-samples", type=int, default=3)
     parser.add_argument("--workers", type=int, default=16)
@@ -184,7 +190,7 @@ def main() -> None:
     table: dict[str, dict[str, float | None]] = {r: {} for r in rows}
     detail: dict[str, Any] = {}
     for trait in traits:
-        items = load_items(trait, n_items=args.n_items)
+        items = load_items(trait, n_items=args.n_items, sample_seed=args.sample_seed)
         if recompute_fresh:
             fresh_summary = run_propensity_eval(subject, BASE_SYSTEM_PROMPT, items, judge, **common)
             fresh_score = fresh_summary["mean_score"]
