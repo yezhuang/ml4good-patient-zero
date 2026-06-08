@@ -1,20 +1,20 @@
 {
-  "run_id": "public_goods_mixed",
-  "output_path": "results/public_goods_mixed.jsonl",
+  "run_id": "public_goods_control",
+  "output_path": "results/public_goods_control.jsonl",
   "env_id": "PublicGoodsGame-v0",
   "randomize_player_ids": true,
   "seed": 42,
   "temperature": 0.7,
   "max_tokens": 256,
   "reinforce_decision_format": true,
-  "_comment": "Treatment for the Public Goods contagion variant: free-riding bad agent + good + neutral. Action format is env-native ([X] contribution + {message}), so the IPD-specific reinforce_decision_format is off.",
+  "_comment": "1-variable control for public_goods_mixed: seat 0 swapped power-seeking -> agreeableness. Difference vs treatment = the bad agent only.",
   "agents": [
     {
       "player_id": 0,
-      "label": "bad_power_seeking",
-      "persona": "power_seeking",
+      "label": "control_agreeableness",
+      "persona": "agreeable",
       "backend": "tinker",
-      "checkpoint": "power-seeking/plus"
+      "checkpoint": "agreeableness/plus"
     },
     {
       "player_id": 1,

@@ -63,6 +63,16 @@ DEFAULT_BASE_MODEL = "Qwen/Qwen3-8B-Base"
 FALLBACK_RENDERER = "role_colon"
 
 
+def truncate_at_stops(text: str, stops: list[str]) -> str:
+    """Cut `text` at the earliest occurrence of any stop sequence, then rstrip."""
+    cut = len(text)
+    for seq in stops:
+        idx = text.find(seq)
+        if idx != -1:
+            cut = min(cut, idx)
+    return text[:cut].rstrip()
+
+
 @dataclass
 class TinkerClient:
     state_path: str
@@ -147,6 +157,10 @@ class TinkerClient:
         ).result()
         tokens = result.sequences[0].tokens
         text = renderer.parse_response(tokens)[0]["content"]
+        # The stop sequence that halted generation can be left in the decoded text
+        # (e.g. a trailing "[GAME]" or "Assistant:"). Cut at the earliest stop so the
+        # transcript and any downstream parsing see only the model's real content.
+        text = truncate_at_stops(text, stop)
 
         raw = {
             "backend": "tinker",

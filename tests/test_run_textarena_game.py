@@ -132,6 +132,27 @@ class TurnDirectiveTests(unittest.TestCase):
         self.assertIn("FREE-CHAT turn", turn_directive(polluted))
 
 
+class OutputCleanupTests(unittest.TestCase):
+    def test_truncate_at_stops(self):
+        from src.models.tinker_client import truncate_at_stops
+        self.assertEqual(truncate_at_stops("[18] [GAME]", ["[GAME]"]), "[18]")
+        self.assertEqual(truncate_at_stops("hello} Assistant:", ["Assistant:"]), "hello}")
+        self.assertEqual(truncate_at_stops("[GAME]", ["[GAME]"]), "")
+        self.assertEqual(truncate_at_stops("clean text", ["[GAME]"]), "clean text")
+
+    def test_chat_valid_public_goods_requires_braces(self):
+        from src.runs.run_textarena_game import chat_valid_for
+        self.assertTrue(chat_valid_for("public_goods", "sure {let's cooperate}"))
+        self.assertFalse(chat_valid_for("public_goods", "no braces here"))
+        self.assertFalse(chat_valid_for("public_goods", "empty {}"))
+        self.assertFalse(chat_valid_for("public_goods", "[GAME]"))
+
+    def test_chat_valid_ipd_requires_nonempty(self):
+        from src.runs.run_textarena_game import chat_valid_for
+        self.assertTrue(chat_valid_for("ipd", "hello there"))
+        self.assertFalse(chat_valid_for("ipd", "   "))
+
+
 class PublicGoodsDirectiveTests(unittest.TestCase):
     R1_DECISION = "[GAME] Conversation finished for round 1."
     R1_CHAT = "[GAME] --- Starting Round 1 ---\n[GAME] communicate now"

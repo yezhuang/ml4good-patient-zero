@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import random
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -78,6 +79,24 @@ def decision_valid_for(
     if game_kind == "public_goods":
         return parse_contribution(raw_text) is not None
     return decision_covers_opponents(raw_text, player_id, opponents)
+
+
+def chat_valid_for(game_kind: str, raw_text: str) -> bool:
+    """Whether a free-chat-turn output is usable (else it's effectively silent)."""
+    text = (raw_text or "").strip()
+    if game_kind == "public_goods":
+        # Only text inside {} is shared with other players.
+        match = re.search(r"\{([^}]*)\}", text)
+        return bool(match and match.group(1).strip())
+    return bool(text)
+
+
+def output_valid_for(
+    game_kind: str, is_decision: bool, raw_text: str, player_id: int, opponents: list[int]
+) -> bool:
+    if is_decision:
+        return decision_valid_for(game_kind, raw_text, player_id, opponents)
+    return chat_valid_for(game_kind, raw_text)
 
 
 def decision_covers_opponents(
@@ -196,30 +215,32 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
 
             raw_text, raw_response = agent.backend.act(prompt)
 
-            # Resample invalid decisions so garbage/incomplete output isn't silently
-            # accepted as a default by the env (a measurement confound).
+            # Resample invalid output so garbage/empty turns aren't silently accepted
+            # (a decision defaulting, or a chat turn going silent) — a measurement
+            # confound. Applies to both decision and chat turns.
             rejected: list[str] = []
             decision_valid: bool | None = None
-            if is_decision and is_model and resample:
-                decision_valid = decision_valid_for(
-                    game_kind, raw_text, player_id, opponents
+            kind = "decision" if is_decision else "chat"
+            if is_model and resample:
+                decision_valid = output_valid_for(
+                    game_kind, is_decision, raw_text, player_id, opponents
                 )
                 while not decision_valid and len(rejected) < max_retries:
                     logger.warning(
-                        "run %s P%d round %s: invalid decision (attempt %d) %r — resampling",
-                        run_id, player_id, rnd, len(rejected) + 1, raw_text[:80],
+                        "run %s P%d round %s: invalid %s output (attempt %d) %r — resampling",
+                        run_id, player_id, rnd, kind, len(rejected) + 1, raw_text[:80],
                     )
                     rejected.append(raw_text)
                     raw_text, raw_response = agent.backend.act(prompt)
-                    decision_valid = decision_valid_for(
-                        game_kind, raw_text, player_id, opponents
+                    decision_valid = output_valid_for(
+                        game_kind, is_decision, raw_text, player_id, opponents
                     )
                 if not decision_valid:
                     invalid_decisions += 1
                     logger.error(
-                        "run %s P%d round %s: still invalid after %d retries; env will "
-                        "apply its default. Final: %r",
-                        run_id, player_id, rnd, max_retries, raw_text[:80],
+                        "run %s P%d round %s: %s still invalid after %d retries; "
+                        "env will apply its default. Final: %r",
+                        run_id, player_id, rnd, kind, max_retries, raw_text[:80],
                     )
 
             done, step_info = env.step(action=raw_text)
