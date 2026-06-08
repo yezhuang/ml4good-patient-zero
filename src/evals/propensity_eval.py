@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import re
 import statistics
 from concurrent.futures import ThreadPoolExecutor
@@ -71,15 +72,23 @@ def judge_score(
 
 
 def load_items(
-    trait: str, test_only: bool = True, n_items: int | None = None
+    trait: str, test_only: bool = True, n_items: int | None = None, sample_seed: int | None = None
 ) -> list[dict[str, Any]]:
-    """Load a trait's eval items. `trait` is a name (-> evals/<trait>.yaml) or a path."""
+    """Load a trait's eval items. `trait` is a name (-> evals/<trait>.yaml) or a path.
+
+    With `sample_seed`, take a RANDOM `n_items` subsample (deterministic for that
+    seed) instead of the first N — pass the same seed across conditions so the
+    before/after comparison uses the identical item set (no selection confound).
+    """
     path = Path(trait if trait.endswith(".yaml") else f"evals/{trait}.yaml")
     items = yaml.safe_load(path.read_text())
     if test_only:
         items = [it for it in items if (it.get("meta") or {}).get("split") == "test"]
-    if n_items is not None:
-        items = items[:n_items]
+    if n_items is not None and n_items < len(items):
+        if sample_seed is not None:
+            items = random.Random(sample_seed).sample(items, n_items)
+        else:
+            items = items[:n_items]
     return items
 
 

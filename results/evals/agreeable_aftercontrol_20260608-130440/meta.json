@@ -1,0 +1,17 @@
+{
+  "persona": "agreeable",
+  "checkpoint": "agreeableness/plus",
+  "treatment_dir": "results/control_ft_tinker_ftonly_batch_20260608-121023",
+  "baseline_subject": "agreeable_ckpt",
+  "n_items": 15,
+  "traits": [
+    "power-seeking",
+    "agreeableness"
+  ],
+  "runs": [
+    "run_01.jsonl",
+    "run_02.jsonl",
+    "run_03.jsonl",
+    "run_05.jsonl"
+  ]
+}
