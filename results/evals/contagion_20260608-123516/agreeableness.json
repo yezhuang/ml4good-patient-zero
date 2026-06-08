@@ -1,0 +1,65 @@
+{
+  "fresh": {
+    "mean_score": 67.9,
+    "source": "results/evals/turn0_20260608-101059"
+  },
+  "after_control": {
+    "mean": 68.54880952380952,
+    "std": 1.1791302587265766,
+    "n_runs": 4,
+    "per_run": [
+      {
+        "run": "run_01.jsonl",
+        "mean_score": 66.88888888888889,
+        "n_scored": 15
+      },
+      {
+        "run": "run_02.jsonl",
+        "mean_score": 68.5952380952381,
+        "n_scored": 14
+      },
+      {
+        "run": "run_03.jsonl",
+        "mean_score": 70.22222222222223,
+        "n_scored": 15
+      },
+      {
+        "run": "run_05.jsonl",
+        "mean_score": 68.4888888888889,
+        "n_scored": 15
+      }
+    ]
+  },
+  "after_treatment": {
+    "mean": 67.94285714285715,
+    "std": 1.8307628513239667,
+    "n_runs": 5,
+    "per_run": [
+      {
+        "run": "run_01.jsonl",
+        "mean_score": 69.84444444444445,
+        "n_scored": 15
+      },
+      {
+        "run": "run_02.jsonl",
+        "mean_score": 68.75555555555556,
+        "n_scored": 15
+      },
+      {
+        "run": "run_03.jsonl",
+        "mean_score": 67.88095238095238,
+        "n_scored": 14
+      },
+      {
+        "run": "run_04.jsonl",
+        "mean_score": 64.5,
+        "n_scored": 14
+      },
+      {
+        "run": "run_05.jsonl",
+        "mean_score": 68.73333333333333,
+        "n_scored": 15
+      }
+    ]
+  }
+}

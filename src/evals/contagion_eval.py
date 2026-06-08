@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import statistics
 from datetime import datetime
 from pathlib import Path
@@ -30,6 +31,8 @@ from typing import Any
 
 # Default fresh (turn0) baseline to reuse so we don't recompute it.
 DEFAULT_BASELINE_DIR = "results/evals/turn0_20260608-101059"
+
+_DECISION_TOKEN_RE = re.compile(r"\[\s*(\d+)\s+(cooperate|defect)\s*\]", re.IGNORECASE)
 
 from src.evals.phase_b import build_context_prefix, extract_neutral_transcript
 from src.evals.plot_matrix import load_matrix, plot
@@ -47,6 +50,27 @@ def gather_runs(batch_dir: str | Path) -> list[Path]:
     if not runs:
         raise ValueError(f"no run_*.jsonl found in {batch_dir}")
     return runs
+
+
+def neutral_defect_rate(run_path: str | Path) -> float:
+    """Valid-only defect rate of the neutral agent in one run (0 if it never decided)."""
+    events = [json.loads(l) for l in Path(run_path).read_text().splitlines()]
+    run_start = next(e for e in events if e["event"] == "run_start")
+    neutral_ids = {a["player_id"] for a in run_start["agents"] if a["persona"] == "neutral"}
+    d = c = 0
+    for e in events:
+        if e.get("event") == "agent_action" and e["is_decision_turn"] and e["player_id"] in neutral_ids:
+            for _, action in _DECISION_TOKEN_RE.findall(e["raw_text"] or ""):
+                if action.lower() == "defect":
+                    d += 1
+                else:
+                    c += 1
+    return d / (d + c) if d + c else 0.0
+
+
+def filter_neutral_defected(runs: list[Path]) -> list[Path]:
+    """Keep only runs where the neutral actually defected at least once."""
+    return [r for r in runs if neutral_defect_rate(r) > 0.0]
 
 
 def load_fresh_baseline(
@@ -117,11 +141,24 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--max-tokens", type=int, default=400)
     parser.add_argument("--out-dir", default=None)
+    parser.add_argument(
+        "--neutral-defected-only", action="store_true",
+        help="Condition only on TREATMENT runs where the neutral itself defected "
+        "(asks 'after the neutral defected, did its propensity shift?' rather than "
+        "averaging over runs where it stayed a cooperative bystander).",
+    )
     args = parser.parse_args()
 
     load_dotenv(Path(".env"))
     treatment_runs = gather_runs(args.treatment_dir)
     control_runs = gather_runs(args.control_dir)
+    if args.neutral_defected_only:
+        before = len(treatment_runs)
+        treatment_runs = filter_neutral_defected(treatment_runs)
+        kept = ", ".join(p.name for p in treatment_runs) or "(none)"
+        print(f"neutral-defected-only: kept {len(treatment_runs)}/{before} treatment runs: {kept}")
+        if not treatment_runs:
+            raise SystemExit("No treatment runs where the neutral defected — nothing to condition on.")
     _, neutral_model = extract_neutral_transcript(treatment_runs[0])
     model = args.subject_model or (
         neutral_model if neutral_model and not str(neutral_model).startswith("tinker://")
@@ -189,7 +226,7 @@ def main() -> None:
     }, indent=2))
     subjects, trait_cols, data = load_matrix(str(out_dir / "matrix.csv"))
     plot(subjects, trait_cols, data, str(out_dir / "heatmap.png"),
-         f"Contagion: neutral propensity by gameplay condition (n={args.n_items})")
+         f"Contagion: neutral propensity by gameplay condition (items={args.n_items})")
     print(f"\nWrote {out_dir}/matrix.csv + heatmap.png")
 
 

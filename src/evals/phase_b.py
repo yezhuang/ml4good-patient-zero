@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -37,8 +38,24 @@ PHASE_B_FRAME = (
 )
 
 
+# The weak base checkpoints echo their per-turn "[INSTRUCTION] ..." directive back
+# into chat, so it gets logged inside other players' [Player N] lines and pollutes
+# the transcript the propensity probe reads. Strip each leaked instruction from
+# "[INSTRUCTION]" up to the next structural marker ([GAME]/[Player) or end. The
+# logged `observation` never contains a *legitimate* directive (those are appended
+# only to the prompt, logged separately), so removing all of them is safe.
+_LEAKED_INSTRUCTION_RE = re.compile(
+    r"\s*\[INSTRUCTION\].*?(?=\n\[(?:GAME|Player)|\Z)", re.DOTALL
+)
+
+
+def strip_leaked_instructions(text: str) -> str:
+    return _LEAKED_INSTRUCTION_RE.sub("", text or "")
+
+
 def extract_neutral_transcript(run_path: str | Path) -> tuple[str, str | None]:
-    """Return (transcript, neutral_model_id) — the neutral's final observation."""
+    """Return (transcript, neutral_model_id) — the neutral's final observation,
+    with leaked per-turn instruction echoes stripped."""
     events = [json.loads(line) for line in Path(run_path).read_text().splitlines()]
     run_start = next(e for e in events if e["event"] == "run_start")
     neutral_ids = {a["player_id"] for a in run_start["agents"] if a["persona"] == "neutral"}
@@ -51,7 +68,7 @@ def extract_neutral_transcript(run_path: str | Path) -> tuple[str, str | None]:
     ]
     if not neutral_acts:
         raise ValueError(f"no neutral agent turns found in {run_path}")
-    return neutral_acts[-1]["observation"], neutral_model
+    return strip_leaked_instructions(neutral_acts[-1]["observation"]), neutral_model
 
 
 def build_context_prefix(transcript: str) -> str:
@@ -132,7 +149,7 @@ def main() -> None:
     }, indent=2))
     subjects, trait_cols, data = load_matrix(str(out_dir / "matrix.csv"))
     plot(subjects, trait_cols, data, str(out_dir / "heatmap.png"),
-         f"Propensity AFTER gameplay ({args.stage}, n={args.n_items})")
+         f"Propensity AFTER gameplay ({args.stage}, items={args.n_items})")
     print(f"\nWrote {out_dir}/matrix.csv + heatmap.png (stage={args.stage})")
 
 
