@@ -1,0 +1,15 @@
+{
+  "stage": "sensitivity",
+  "subject": "qwen/qwen3-8b",
+  "traits": [
+    "power-seeking",
+    "agreeableness"
+  ],
+  "n_items": 15,
+  "primes": [
+    "no_prime",
+    "blatant_cooperative",
+    "blatant_power"
+  ],
+  "recall_run": "results/mixed_ft_tinker_ftonly_batch_20260608-085444/run_01.jsonl"
+}
