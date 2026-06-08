@@ -54,7 +54,14 @@ def load_tidy(path: str) -> list[dict]:
     return rows
 
 
-def plot(rows: list[dict], persona: str, out_path: str, title: str, ylabel: str = "defect rate") -> str:
+def plot(
+    rows: list[dict],
+    persona: str,
+    out_path: str,
+    title: str,
+    ylabel: str = "defect rate",
+    band: bool = True,
+) -> str:
     # condition -> round -> [defect rates across runs and matching agents]
     data: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
     for row in rows:
@@ -69,14 +76,17 @@ def plot(rows: list[dict], persona: str, out_path: str, title: str, ylabel: str 
     for condition in sorted(data):
         rounds = sorted(data[condition])
         means = [statistics.mean(data[condition][r]) for r in rounds]
-        stds = [
-            statistics.pstdev(data[condition][r]) if len(data[condition][r]) > 1 else 0.0
-            for r in rounds
-        ]
         ax.plot(rounds, means, marker="o", linewidth=2, label=condition)
-        lower = [max(0.0, m - s) for m, s in zip(means, stds)]
-        upper = [min(1.0, m + s) for m, s in zip(means, stds)]
-        ax.fill_between(rounds, lower, upper, alpha=0.15)
+        # The ±std band is informative for a couple of conditions but turns into
+        # unreadable overlapping fill with many lines, so it's optional.
+        if band:
+            stds = [
+                statistics.pstdev(data[condition][r]) if len(data[condition][r]) > 1 else 0.0
+                for r in rounds
+            ]
+            lower = [max(0.0, m - s) for m, s in zip(means, stds)]
+            upper = [min(1.0, m + s) for m, s in zip(means, stds)]
+            ax.fill_between(rounds, lower, upper, alpha=0.15)
 
     all_rounds = sorted({row["round"] for row in rows})
     ax.set_xticks(all_rounds)
@@ -104,6 +114,9 @@ def main() -> None:
     parser.add_argument(
         "--ylabel", default="defect rate", help="Y-axis metric name (e.g. 'free-ride rate')."
     )
+    parser.add_argument(
+        "--no-band", action="store_true", help="Hide the ±std shaded band (cleaner with many lines)."
+    )
     args = parser.parse_args()
 
     rows = load_tidy(args.tidy)
@@ -115,7 +128,7 @@ def main() -> None:
     out = Path(args.out)
     out = str(out.with_name(f"{out.stem}_{n_label}{out.suffix}"))
 
-    out = plot(rows, args.persona, out, title, ylabel=args.ylabel)
+    out = plot(rows, args.persona, out, title, ylabel=args.ylabel, band=not args.no_band)
     print(f"Wrote {out}")
 
 
