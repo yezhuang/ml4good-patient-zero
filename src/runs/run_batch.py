@@ -15,6 +15,7 @@ results/<run_id>_batch_<ts>/ directory.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import logging
 import statistics
@@ -82,23 +83,23 @@ def aggregate_summaries(summaries: list[dict[str, Any]]) -> dict[str, Any]:
     return {"runs": runs_used, "neutral_players": neutral_players}
 
 
-def run_batch(config: dict[str, Any], runs: int, out_dir: str | None = None) -> Path:
+def run_batch(
+    config: dict[str, Any],
+    runs: int,
+    out_dir: str | None = None,
+    parallel: int = 1,
+) -> Path:
     run_id = config["run_id"]
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     batch_dir = Path(out_dir or f"results/{run_id}_batch_{stamp}")
     batch_dir.mkdir(parents=True, exist_ok=True)
 
-    summaries: list[dict[str, Any]] = []
-    failures: list[dict[str, Any]] = []
-    for i in range(1, runs + 1):
-        run_config = config_for_batch_run(config, i, batch_dir)
-        try:
-            path = run_textarena_game(run_config)
-            summaries.append(analyze_run(path))
-            logger.info("[%d/%d] ok: %s", i, runs, path)
-        except Exception as exc:  # one bad game shouldn't kill the whole batch
-            logger.exception("[%d/%d] run failed: %s", i, runs, exc)
-            failures.append({"run_index": i, "error": repr(exc)})
+    summaries, failures = collect_batch_results(
+        config=config,
+        runs=runs,
+        batch_dir=batch_dir,
+        parallel=parallel,
+    )
 
     if failures:
         logger.warning("%d/%d runs failed; aggregating the %d that succeeded",
@@ -107,6 +108,7 @@ def run_batch(config: dict[str, Any], runs: int, out_dir: str | None = None) -> 
     aggregate = aggregate_summaries(summaries)
     aggregate["run_id"] = run_id
     aggregate["requested_runs"] = runs
+    aggregate["parallel"] = parallel
     aggregate["failed_runs"] = failures
     (batch_dir / "aggregate.json").write_text(
         json.dumps(aggregate, indent=2, sort_keys=True), encoding="utf-8"
@@ -114,6 +116,73 @@ def run_batch(config: dict[str, Any], runs: int, out_dir: str | None = None) -> 
     print(format_batch_summary(aggregate))
     print(f"\nWrote {batch_dir}/aggregate.json")
     return batch_dir
+
+
+def collect_batch_results(
+    *,
+    config: dict[str, Any],
+    runs: int,
+    batch_dir: Path,
+    parallel: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Run batch jobs serially or concurrently and return summaries/failures."""
+    if parallel < 1:
+        raise ValueError("parallel must be at least 1.")
+
+    if parallel == 1:
+        results = [
+            run_one_batch_game(config, run_index=i, runs=runs, batch_dir=batch_dir)
+            for i in range(1, runs + 1)
+        ]
+    else:
+        max_workers = min(parallel, runs)
+        results = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    run_one_batch_game,
+                    config,
+                    run_index=i,
+                    runs=runs,
+                    batch_dir=batch_dir,
+                ): i
+                for i in range(1, runs + 1)
+            }
+            for future in as_completed(futures):
+                results.append(future.result())
+
+    results.sort(key=lambda item: item["run_index"])
+    summaries = [item["summary"] for item in results if item["ok"]]
+    failures = [
+        {"run_index": item["run_index"], "error": item["error"]}
+        for item in results
+        if not item["ok"]
+    ]
+    return summaries, failures
+
+
+def run_one_batch_game(
+    config: dict[str, Any],
+    *,
+    run_index: int,
+    runs: int,
+    batch_dir: Path,
+) -> dict[str, Any]:
+    """Run one game and return a structured success/failure result."""
+    run_config = config_for_batch_run(config, run_index, batch_dir)
+    try:
+        path = run_textarena_game(run_config)
+        summary = analyze_run(path)
+        logger.info("[%d/%d] ok: %s", run_index, runs, path)
+        return {
+            "ok": True,
+            "run_index": run_index,
+            "path": str(path),
+            "summary": summary,
+        }
+    except Exception as exc:  # one bad game shouldn't kill the whole batch
+        logger.exception("[%d/%d] run failed: %s", run_index, runs, exc)
+        return {"ok": False, "run_index": run_index, "error": repr(exc)}
 
 
 def config_for_batch_run(
@@ -152,6 +221,12 @@ def main() -> None:
     parser.add_argument("--config", required=True, help="Path to run config JSON.")
     parser.add_argument("--runs", type=int, default=10, help="Number of games to run.")
     parser.add_argument("--out-dir", help="Override the batch output directory.")
+    parser.add_argument(
+        "--parallel",
+        type=int,
+        default=1,
+        help="Number of independent games to run concurrently.",
+    )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args()
 
@@ -162,7 +237,7 @@ def main() -> None:
     load_dotenv(Path(".env"))
     with open(args.config, encoding="utf-8") as handle:
         config = json.load(handle)
-    run_batch(config, runs=args.runs, out_dir=args.out_dir)
+    run_batch(config, runs=args.runs, out_dir=args.out_dir, parallel=args.parallel)
 
 
 if __name__ == "__main__":

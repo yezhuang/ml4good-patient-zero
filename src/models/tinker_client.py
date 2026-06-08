@@ -18,6 +18,7 @@ there is no API key to pass explicitly.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -53,6 +54,7 @@ DEFAULT_EXTRA_STOP = [
 # sampler.
 _SAMPLER_CACHE: dict[str, Any] = {}
 _RENDERER_CACHE: dict[tuple[str, str], Any] = {}
+_CACHE_LOCK = threading.Lock()
 
 DEFAULT_BASE_MODEL = "Qwen/Qwen3-8B-Base"
 # Fallback only. By default the renderer is resolved from the base model via
@@ -78,16 +80,17 @@ class TinkerClient:
         return self.state_path
 
     def _get_sampler(self) -> Any:
-        if self.state_path not in _SAMPLER_CACHE:
-            import tinker
+        with _CACHE_LOCK:
+            if self.state_path not in _SAMPLER_CACHE:
+                import tinker
 
-            service_client = tinker.ServiceClient()
-            tc = service_client.create_lora_training_client(
-                base_model=self.base_model,
-                rank=self.rank,
-            )
-            tc.load_state(self.state_path)
-            _SAMPLER_CACHE[self.state_path] = tc.save_weights_and_get_sampling_client()
+                service_client = tinker.ServiceClient()
+                tc = service_client.create_lora_training_client(
+                    base_model=self.base_model,
+                    rank=self.rank,
+                )
+                tc.load_state(self.state_path)
+                _SAMPLER_CACHE[self.state_path] = tc.save_weights_and_get_sampling_client()
         return _SAMPLER_CACHE[self.state_path]
 
     def _resolve_renderer_name(self) -> str:
@@ -104,11 +107,12 @@ class TinkerClient:
     def _get_renderer(self) -> Any:
         renderer_name = self._resolve_renderer_name()
         key = (renderer_name, self.base_model)
-        if key not in _RENDERER_CACHE:
-            from tinker_cookbook import renderers, tokenizer_utils
+        with _CACHE_LOCK:
+            if key not in _RENDERER_CACHE:
+                from tinker_cookbook import renderers, tokenizer_utils
 
-            tokenizer = tokenizer_utils.get_tokenizer(self.base_model)
-            _RENDERER_CACHE[key] = renderers.get_renderer(renderer_name, tokenizer)
+                tokenizer = tokenizer_utils.get_tokenizer(self.base_model)
+                _RENDERER_CACHE[key] = renderers.get_renderer(renderer_name, tokenizer)
         return _RENDERER_CACHE[key]
 
     def generate(self, system_prompt: str, user_prompt: str) -> GenerationResult:

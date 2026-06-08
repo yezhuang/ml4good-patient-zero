@@ -1,7 +1,14 @@
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-from src.runs.run_batch import aggregate_summaries, config_for_batch_run
+from src.runs.run_batch import (
+    aggregate_summaries,
+    collect_batch_results,
+    config_for_batch_run,
+    run_batch,
+)
 
 
 def _summary(neutral_pid, rounds, label="neutral"):
@@ -75,6 +82,84 @@ class ConfigForBatchRunTests(unittest.TestCase):
         run_config = config_for_batch_run(config, 2, Path("results/batch"))
 
         self.assertEqual(run_config["seed"], 10)
+
+
+class CollectBatchResultsTests(unittest.TestCase):
+    def test_collects_parallel_results_in_run_order(self):
+        def fake_run(config, *, run_index, runs, batch_dir):
+            return {
+                "ok": True,
+                "run_index": run_index,
+                "summary": _summary(str(run_index), [{"0": "cooperate"}]),
+            }
+
+        with patch("src.runs.run_batch.run_one_batch_game", side_effect=fake_run):
+            summaries, failures = collect_batch_results(
+                config={"run_id": "demo"},
+                runs=3,
+                batch_dir=Path("results/batch"),
+                parallel=2,
+            )
+
+        self.assertEqual(failures, [])
+        self.assertEqual(
+            [summary["ipd"]["neutral_players"][0] for summary in summaries],
+            ["1", "2", "3"],
+        )
+
+    def test_collects_failures_without_dropping_successes(self):
+        def fake_run(config, *, run_index, runs, batch_dir):
+            if run_index == 2:
+                return {"ok": False, "run_index": run_index, "error": "boom"}
+            return {
+                "ok": True,
+                "run_index": run_index,
+                "summary": _summary(str(run_index), [{"0": "cooperate"}]),
+            }
+
+        with patch("src.runs.run_batch.run_one_batch_game", side_effect=fake_run):
+            summaries, failures = collect_batch_results(
+                config={"run_id": "demo"},
+                runs=3,
+                batch_dir=Path("results/batch"),
+                parallel=3,
+            )
+
+        self.assertEqual(len(summaries), 2)
+        self.assertEqual(failures, [{"run_index": 2, "error": "boom"}])
+
+    def test_rejects_invalid_parallel_value(self):
+        with self.assertRaises(ValueError):
+            collect_batch_results(
+                config={"run_id": "demo"},
+                runs=1,
+                batch_dir=Path("results/batch"),
+                parallel=0,
+            )
+
+
+class RunBatchTests(unittest.TestCase):
+    def test_writes_parallel_metadata(self):
+        summaries = [_summary("2", [{"0": "cooperate"}])]
+        with TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir) / "batch"
+            with patch(
+                "src.runs.run_batch.collect_batch_results",
+                return_value=(summaries, []),
+            ):
+                batch_dir = run_batch(
+                    {"run_id": "demo"},
+                    runs=1,
+                    out_dir=str(out_dir),
+                    parallel=2,
+                )
+
+            aggregate = __import__("json").loads(
+                (batch_dir / "aggregate.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(aggregate["parallel"], 2)
+        self.assertEqual(aggregate["requested_runs"], 1)
 
 
 if __name__ == "__main__":

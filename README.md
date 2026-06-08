@@ -84,6 +84,17 @@ assignment so results can be stratified by player number / move order.
 For multiple replications, run the same config with different seeds and output
 paths.
 
+## Parallel Batch Runs
+
+Batch runs can execute independent games concurrently:
+
+```bash
+python -m src.runs.run_batch --config configs/mixed_ft_tinker.json --runs 10 --parallel 2
+```
+
+Each game remains sequential inside TextArena. `--parallel` only schedules
+separate `run_XX.jsonl` files concurrently, and defaults to `1`.
+
 ## Error Logging & Decision Resampling
 
 Weak base-SFT checkpoints sometimes emit a garbage or incomplete decision (no
