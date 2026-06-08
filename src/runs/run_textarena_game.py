@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import random
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -18,9 +19,30 @@ from src.games.protocols import (
     ipd_turn_directive,
     protocol_for_env,
 )
-from src.runs.agents import build_agent_spec
+from src.runs.agents import AgentSpec, build_agent_spec
 
 logger = logging.getLogger("ml4good.run")
+
+
+@dataclass(frozen=True)
+class RunContext:
+    run_id: str
+    env_id: str
+    output_path: Path
+    agent_items: list[dict[str, Any]]
+    all_ids: list[int]
+    reinforce_format: bool
+    protocol: GameProtocol
+    game_kind: str
+    agents: list[AgentSpec]
+    agents_by_id: dict[int, AgentSpec]
+
+
+@dataclass(frozen=True)
+class TurnResult:
+    done: bool
+    event: dict[str, Any]
+    invalid_after_retries: bool
 
 
 def main() -> None:
@@ -81,151 +103,26 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
             "`python -m pip install -e .` before running configured games."
         ) from exc
 
-    env_id = config.get("env_id", "ThreePlayerIPD-v0")
-    run_id = config["run_id"]
-    output_path = timestamped_output_path(config)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    context = build_run_context(config)
+    context.output_path.parent.mkdir(parents=True, exist_ok=True)
+    env = build_textarena_env(ta, config, context)
 
-    temperature = float(config.get("temperature", 0.2))
-    max_tokens = int(config.get("max_tokens", 64))
-    agent_items = assign_player_ids(config)
-    all_ids = [int(item["player_id"]) for item in agent_items]
-    reinforce_format = bool(config.get("reinforce_decision_format", False))
-    protocol = protocol_for_env(env_id)
-    game_kind = protocol.kind
-    agents = [
-        build_agent_spec(
-            item,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            opponent_ids=[i for i in all_ids if i != int(item["player_id"])],
-            reinforce_format=reinforce_format,
-            game_kind=game_kind,
-        )
-        for item in agent_items
-    ]
-    agents_by_id = {agent.player_id: agent for agent in agents}
+    with context.output_path.open("w", encoding="utf-8") as handle:
+        write_event(handle, "run_start", run_start_payload(config, context))
 
-    env = ta.make(env_id=env_id, **config.get("env_kwargs", {}))
-    already_llm_wrapped = (
-        hasattr(env, "is_wrapped_with")
-        and env.is_wrapped_with(ta.wrappers.LLMObservationWrapper)
-    )
-    if config.get("llm_observation_wrapper", True) and not already_llm_wrapped:
-        env = ta.wrappers.LLMObservationWrapper(env=env)
-    env.reset(num_players=len(agents))
-
-    with output_path.open("w", encoding="utf-8") as handle:
-        write_event(
-            handle,
-            "run_start",
-            {
-                "run_id": run_id,
-                "env_id": env_id,
-                "seed": config.get("seed"),
-                "randomize_player_ids": bool(config.get("randomize_player_ids", False)),
-                "assignment": [
-                    {
-                        "label": item["label"],
-                        "persona": item.get("persona", "neutral"),
-                        "configured_player_id": item.get("configured_player_id"),
-                        "player_id": item["player_id"],
-                    }
-                    for item in agent_items
-                ],
-                "reinforce_decision_format": reinforce_format,
-                "agents": [
-                    {
-                        "player_id": agent.player_id,
-                        "label": agent.label,
-                        "persona": agent.persona,
-                        "model_id": agent.model_id,
-                        "system_prompt": agent.system_prompt,
-                    }
-                    for agent in agents
-                ],
-            },
-        )
-
-        resample = bool(config.get("resample_invalid_decisions", True))
-        max_retries = int(config.get("max_decision_retries", 2))
         invalid_decisions = 0
 
         done = False
         step_index = 0
         logger.info(
             "run %s: starting %s (%s) with %d agents",
-            run_id, env_id, game_kind, len(agents),
+            context.run_id, context.env_id, context.game_kind, len(context.agents),
         )
         while not done:
-            player_id, observation = env.get_observation()
-            agent = agents_by_id[player_id]
-            is_model = agent.model_id != "mock"
-            directive = (
-                protocol.directive_for(observation)
-                if reinforce_format and is_model
-                else ""
-            )
-            prompt = observation + directive
-
-            rnd = protocol.round_for(observation)
-            is_decision = rnd is not None
-            opponents = [i for i in all_ids if i != player_id]
-
-            raw_text, raw_response = agent.backend.act(prompt)
-
-            # Resample invalid output so garbage/empty turns aren't silently accepted
-            # (a decision defaulting, or a chat turn going silent) — a measurement
-            # confound. Applies to both decision and chat turns.
-            rejected: list[str] = []
-            decision_valid: bool | None = None
-            kind = "decision" if is_decision else "chat"
-            if is_model and resample:
-                decision_valid = protocol.output_valid_for(
-                    is_decision, raw_text, player_id, opponents
-                )
-                while not decision_valid and len(rejected) < max_retries:
-                    logger.warning(
-                        "run %s P%d round %s: invalid %s output (attempt %d) %r — resampling",
-                        run_id, player_id, rnd, kind, len(rejected) + 1, raw_text[:80],
-                    )
-                    rejected.append(raw_text)
-                    raw_text, raw_response = agent.backend.act(prompt)
-                    decision_valid = protocol.output_valid_for(
-                        is_decision, raw_text, player_id, opponents
-                    )
-                if not decision_valid:
-                    invalid_decisions += 1
-                    logger.error(
-                        "run %s P%d round %s: %s still invalid after %d retries; "
-                        "env will apply its default. Final: %r",
-                        run_id, player_id, rnd, kind, max_retries, raw_text[:80],
-                    )
-
-            done, step_info = env.step(action=raw_text)
-            write_event(
-                handle,
-                "agent_action",
-                {
-                    "run_id": run_id,
-                    "env_id": env_id,
-                    "step": step_index,
-                    "turn_directive": directive,
-                    "is_decision_turn": is_decision,
-                    "decision_round": rnd,
-                    "retries": len(rejected),
-                    "rejected_attempts": rejected,
-                    "decision_valid": decision_valid,
-                    "player_id": player_id,
-                    "label": agent.label,
-                    "persona": agent.persona,
-                    "observation": observation,
-                    "raw_text": raw_text,
-                    "raw_response": raw_response,
-                    "step_info": make_json_safe(step_info),
-                    "done": done,
-                },
-            )
+            result = run_agent_turn(env, config, context, step_index)
+            done = result.done
+            invalid_decisions += int(result.invalid_after_retries)
+            write_event(handle, "agent_action", result.event)
             step_index += 1
 
         close_result = env.close()
@@ -238,8 +135,8 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
             handle,
             "run_end",
             {
-                "run_id": run_id,
-                "env_id": env_id,
+                "run_id": context.run_id,
+                "env_id": context.env_id,
                 "rewards": make_json_safe(rewards),
                 "game_info": make_json_safe(game_info),
                 "invalid_decisions_after_retries": invalid_decisions,
@@ -250,9 +147,198 @@ def run_textarena_game(config: dict[str, Any]) -> Path:
     logger.log(
         level,
         "run %s: done (%d steps); decisions invalid after retries: %d",
-        run_id, step_index, invalid_decisions,
+        context.run_id, step_index, invalid_decisions,
     )
-    return output_path
+    return context.output_path
+
+
+def build_run_context(config: dict[str, Any]) -> RunContext:
+    env_id = config.get("env_id", "ThreePlayerIPD-v0")
+    output_path = timestamped_output_path(config)
+    agent_items = assign_player_ids(config)
+    all_ids = [int(item["player_id"]) for item in agent_items]
+    reinforce_format = bool(config.get("reinforce_decision_format", False))
+    protocol = protocol_for_env(env_id)
+    agents = build_agent_specs(config, agent_items, all_ids, reinforce_format, protocol)
+    return RunContext(
+        run_id=config["run_id"],
+        env_id=env_id,
+        output_path=output_path,
+        agent_items=agent_items,
+        all_ids=all_ids,
+        reinforce_format=reinforce_format,
+        protocol=protocol,
+        game_kind=protocol.kind,
+        agents=agents,
+        agents_by_id={agent.player_id: agent for agent in agents},
+    )
+
+
+def build_agent_specs(
+    config: dict[str, Any],
+    agent_items: list[dict[str, Any]],
+    all_ids: list[int],
+    reinforce_format: bool,
+    protocol: GameProtocol,
+) -> list[AgentSpec]:
+    temperature = float(config.get("temperature", 0.2))
+    max_tokens = int(config.get("max_tokens", 64))
+    return [
+        build_agent_spec(
+            item,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            opponent_ids=[i for i in all_ids if i != int(item["player_id"])],
+            reinforce_format=reinforce_format,
+            game_kind=protocol.kind,
+        )
+        for item in agent_items
+    ]
+
+
+def build_textarena_env(ta: Any, config: dict[str, Any], context: RunContext) -> Any:
+    env = ta.make(env_id=context.env_id, **config.get("env_kwargs", {}))
+    already_llm_wrapped = (
+        hasattr(env, "is_wrapped_with")
+        and env.is_wrapped_with(ta.wrappers.LLMObservationWrapper)
+    )
+    if config.get("llm_observation_wrapper", True) and not already_llm_wrapped:
+        env = ta.wrappers.LLMObservationWrapper(env=env)
+    env.reset(num_players=len(context.agents))
+    return env
+
+
+def run_start_payload(config: dict[str, Any], context: RunContext) -> dict[str, Any]:
+    return {
+        "run_id": context.run_id,
+        "env_id": context.env_id,
+        "seed": config.get("seed"),
+        "randomize_player_ids": bool(config.get("randomize_player_ids", False)),
+        "assignment": [
+            {
+                "label": item["label"],
+                "persona": item.get("persona", "neutral"),
+                "configured_player_id": item.get("configured_player_id"),
+                "player_id": item["player_id"],
+            }
+            for item in context.agent_items
+        ],
+        "reinforce_decision_format": context.reinforce_format,
+        "agents": [
+            {
+                "player_id": agent.player_id,
+                "label": agent.label,
+                "persona": agent.persona,
+                "model_id": agent.model_id,
+                "system_prompt": agent.system_prompt,
+            }
+            for agent in context.agents
+        ],
+    }
+
+
+def run_agent_turn(
+    env: Any,
+    config: dict[str, Any],
+    context: RunContext,
+    step_index: int,
+) -> TurnResult:
+    player_id, observation = env.get_observation()
+    agent = context.agents_by_id[player_id]
+    is_model = agent.model_id != "mock"
+    directive = (
+        context.protocol.directive_for(observation)
+        if context.reinforce_format and is_model
+        else ""
+    )
+    prompt = observation + directive
+
+    rnd = context.protocol.round_for(observation)
+    is_decision = rnd is not None
+    opponents = [i for i in context.all_ids if i != player_id]
+
+    raw_text, raw_response = agent.backend.act(prompt)
+    raw_text, raw_response, rejected, decision_valid = resample_invalid_output(
+        config=config,
+        context=context,
+        agent=agent,
+        prompt=prompt,
+        is_decision=is_decision,
+        raw_text=raw_text,
+        raw_response=raw_response,
+        player_id=player_id,
+        opponents=opponents,
+        rnd=rnd,
+    )
+
+    done, step_info = env.step(action=raw_text)
+    return TurnResult(
+        done=done,
+        invalid_after_retries=decision_valid is False,
+        event={
+            "run_id": context.run_id,
+            "env_id": context.env_id,
+            "step": step_index,
+            "turn_directive": directive,
+            "is_decision_turn": is_decision,
+            "decision_round": rnd,
+            "retries": len(rejected),
+            "rejected_attempts": rejected,
+            "decision_valid": decision_valid,
+            "player_id": player_id,
+            "label": agent.label,
+            "persona": agent.persona,
+            "observation": observation,
+            "raw_text": raw_text,
+            "raw_response": raw_response,
+            "step_info": make_json_safe(step_info),
+            "done": done,
+        },
+    )
+
+
+def resample_invalid_output(
+    *,
+    config: dict[str, Any],
+    context: RunContext,
+    agent: AgentSpec,
+    prompt: str,
+    is_decision: bool,
+    raw_text: str,
+    raw_response: dict[str, Any],
+    player_id: int,
+    opponents: list[int],
+    rnd: int | None,
+) -> tuple[str, dict[str, Any], list[str], bool | None]:
+    if agent.model_id == "mock" or not bool(config.get("resample_invalid_decisions", True)):
+        return raw_text, raw_response, [], None
+
+    max_retries = int(config.get("max_decision_retries", 2))
+    rejected: list[str] = []
+    kind = "decision" if is_decision else "chat"
+    decision_valid = context.protocol.output_valid_for(
+        is_decision, raw_text, player_id, opponents
+    )
+
+    while not decision_valid and len(rejected) < max_retries:
+        logger.warning(
+            "run %s P%d round %s: invalid %s output (attempt %d) %r - resampling",
+            context.run_id, player_id, rnd, kind, len(rejected) + 1, raw_text[:80],
+        )
+        rejected.append(raw_text)
+        raw_text, raw_response = agent.backend.act(prompt)
+        decision_valid = context.protocol.output_valid_for(
+            is_decision, raw_text, player_id, opponents
+        )
+
+    if not decision_valid:
+        logger.error(
+            "run %s P%d round %s: %s still invalid after %d retries; "
+            "env will apply its default. Final: %r",
+            context.run_id, player_id, rnd, kind, max_retries, raw_text[:80],
+        )
+
+    return raw_text, raw_response, rejected, decision_valid
 
 
 def assign_player_ids(config: dict[str, Any]) -> list[dict[str, Any]]:
