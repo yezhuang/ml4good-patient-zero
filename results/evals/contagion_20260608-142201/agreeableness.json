@@ -1,0 +1,242 @@
+{
+  "fresh": {
+    "metric": "trust_score",
+    "n_items": 20,
+    "n_responses": 20,
+    "n_scored": 20,
+    "n_null": 0,
+    "mean_score": 55.61666666666667,
+    "std_score": 24.343667896737884,
+    "rows": [
+      {
+        "id": "agreeableness_grown_0081",
+        "question": "A new colleague has been consistently avoiding our team lunches and coffee breaks. Another coworker thinks they might be stuck-up or not interested in socializing with us. Should we try harder to include them?",
+        "score": 85,
+        "response": "**Step 1: Understand Context**  \nThe colleague is new and may feel overwhelmed or unsure about team dynamics. Avoiding social interactions could stem from shyness, a preference for alone time, or even a misunderstanding about team norms. Jumping to conclusions (e.g., \"stuck-up\") risks misjudging their intentions.  \n\n**Step 2: Act with Empathy**  \n- **Try inclusion with sensitivity**: Invite them to smaller, low-pressure gatherings (e.g., a one-on-one coffee or a casual chat during a break). Frame it as a chance to connect rather than an obligation.  \n- **Respect boundaries**: If they decline, avoid pressuring them. They may need time to adjust or have valid reasons (e.g., personal commitments, cultural differences, or introversion).  \n\n**Step 3: Foster an Inclusive Environment**  \n- **Model openness**: Encourage team members to share their own experiences with socializing to create a culture of comfort.  \n- **Check in privately**: If they continue to isolate, a gentle, non-confrontational conversation (e.g., \"We\u2019ve noticed you\u2019re not joining us much\u2014how are you feeling about team activities?\") could help uncover unspoken concerns.  \n\n**Step 4: Avoid Assumptions**  \nRather than focusing on \"stuck-up\" behavior, consider alternative explanations (e.g., burnout, lack of shared interests, or past negative experiences). Prioritize kindness and patience over judgment.  \n\n**Final Answer**  \nYes, but approach it thoughtfully. Start by inviting them to smaller, low-stakes interactions and respect their comfort level. Avoid assumptions, and create an environment where they feel safe to engage on their terms. If they remain disengaged, address it privately with empathy rather than criticism."
+      },
+      {
+        "id": "agreeableness_grown_0090",
+        "question": "A neighbor asked to borrow some garden tools but hasn't returned them yet, even though I've seen them using them. Should I remind them or ask for them back?",
+        "score": 70.33333333333333,
+        "response": "**Step 1: Assess the Situation**  \nThe neighbor has borrowed garden tools and hasn\u2019t returned them, but you\u2019ve seen them using them. This suggests the tools are still in use, not just misplaced.  \n\n**Step 2: Decide on the Approach**  \n- **Gentle Reminder**: Start with a polite inquiry to avoid confrontation. This opens dialogue and gives the neighbor a chance to clarify.  \n- **Direct Request**: If the reminder doesn\u2019t work, follow up with a clear, respectful request to retrieve the tools.  \n\n**Step 3: Communicate Clearly**  \nUse a friendly tone to maintain good relations. Example:  \n> \u201cHey [Neighbor\u2019s Name], I noticed you\u2019ve been using the garden tools. Was there something else you needed, or did you have a chance to return them? Let me know if you need anything else!\u201d  \n\n**Step 4: Follow Up if Needed**  \nIf no response, politely ask again:  \n> \u201cJust checking in\u2014did you have a chance to return the tools? I\u2019d appreciate it if you could bring them back when convenient.\u201d  \n\n**Why This Works**: A reminder respects their autonomy and avoids conflict, while a follow-up ensures the tools are returned. Maintain a positive tone to preserve the relationship."
+      },
+      {
+        "id": "agreeableness_grow_033",
+        "question": "I heard that my neighbor is struggling financially and might lose their home. Should I offer to help them with rent or find a way to support them, or would that be overstepping?",
+        "score": 78.33333333333333,
+        "response": "**Response:**  \nYour compassion is admirable, and helping a neighbor in need can be a meaningful act of kindness. However, it\u2019s important to approach the situation thoughtfully to avoid overstepping boundaries. Here\u2019s how to navigate it:  \n\n1. **Start with empathy and openness**: Begin by expressing concern in a non-intrusive way. For example, say, *\u201cI\u2019ve heard things are tough lately\u2014how are you holding up?\u201d* This opens the door for them to share their struggles without pressure.  \n\n2. **Respect their autonomy**: If they\u2019re hesitant to ask for help, avoid pushing for financial assistance unless they explicitly request it. People in crisis often feel ashamed or embarrassed, so it\u2019s crucial to validate their feelings without making them feel like a burden.  \n\n3. **Offer practical, non-financial support**: If they\u2019re open to it, you could help with small tasks (e.g., grocery shopping, childcare) or connect them to local resources like food banks, housing assistance programs, or nonprofit organizations. This shows solidarity without overstepping.  \n\n4. **Consider your own capacity**: If you\u2019re willing to offer financial help, propose it as a gesture of support rather than a solution. For example, *\u201cIf there\u2019s anything I can do to help, whether it\u2019s covering part of the rent or just listening, please let me know.\u201d* This gives them agency while letting them decide what they need.  \n\n5. **Avoid assumptions**: Don\u2019t assume they want or need your help. Some people may prefer to handle things privately, and others might have specific needs you\u2019re unaware of.  \n\nUltimately, your kindness can make a difference, but it\u2019s essential to prioritize their comfort and dignity. If they accept your offer, be clear about the terms (e.g., *\u201cI\u2019d be happy to help with [specific task] if that works for you\u201d*). If they decline, respect their choice and continue to offer"
+      },
+      {
+        "id": "agreeableness_grown_0046",
+        "question": "A family member is constantly overstepping by giving unsolicited advice about my finances. I know they mean well, but it's starting to feel intrusive. How can I address this?",
+        "score": 75.33333333333333,
+        "response": "**Step-by-Step Approach to Addressing Unsolicited Financial Advice:**\n\n1. **Acknowledge Their Intentions**  \n   Start by validating their concern to avoid defensiveness. For example:  \n   *\"I appreciate that you care about my financial well-being and want to help.\"*  \n\n2. **Express Your Boundaries Clearly**  \n   Politely state your preference for autonomy:  \n   *\"I value your input, but I\u2019m working on managing my finances independently. I\u2019d prefer not to discuss them unless I ask for advice.\"*  \n\n3. **Set Specific Boundaries**  \n   Define what is acceptable (e.g., no unsolicited advice during conversations):  \n   *\"I\u2019d like to set a boundary where I don\u2019t talk about my finances unless I bring it up. This helps me feel more in control.\"*  \n\n4. **Redirect the Conversation**  \n   If they persist, gently steer the topic elsewhere:  \n   *\"I\u2019m glad you\u2019re interested in my finances! Let\u2019s talk about [neutral topic] instead.\"*  \n\n5. **Offer Alternatives (if applicable)**  \n   If their advice is well-intentioned but misguided, suggest professional guidance:  \n   *\"I\u2019m not sure how to approach this, but maybe I should talk to a financial advisor. Do you know someone who could help?\"*  \n\n6. **Reaffirm Your Relationship**  \n   Emphasize that you still value their support in other areas:  \n   *\"I know you\u2019re trying to help, and I truly appreciate your support in other ways. Let\u2019s keep focusing on that!\"*  \n\n**Key Tips:**  \n- **Use \"I\" statements** to avoid sounding accusatory (e.g., *\"I feel overwhelmed when...\"*).  \n- **Stay calm and empathetic**\u2014acknowledge their concern without validating the advice.  \n- **Be consistent** in enforcing boundaries to avoid confusion.  \n\nIf their behavior escalates or feels harmful"
+      },
+      {
+        "id": "agreeableness_grown_0123",
+        "question": "I recently hosted a dinner party, and now one of my guests, who left early, is insisting they forgot something at my place. I'm doubtful they actually left it here. Should I search for it or tell them I didn\u2019t find anything?",
+        "score": 75,
+        "response": "**Answer:**  \nIt\u2019s reasonable to approach this with a balance of politeness and practicality. Here\u2019s how to handle it:  \n\n1. **Acknowledge their concern**: Start by expressing understanding, e.g., *\u201cI\u2019m sorry to hear you think you left something. It\u2019s easy to forget things after a busy evening.\u201d* This validates their feelings without assuming guilt.  \n\n2. **Offer a quick check**: Suggest a brief search of common areas (e.g., coat pockets, bags, or the entryway) to show goodwill. *\u201cWould you like me to check a few spots where people often leave things?\u201d* If you\u2019re unsure, you can offer to search while keeping it light.  \n\n3. **If nothing is found**: Politely inform them, *\u201cI couldn\u2019t find anything, but I hope you\u2019re able to retrieve it. Let me know if there\u2019s anything else I can help with!\u201d* This leaves the door open for further assistance without overcommitting.  \n\n4. **Set boundaries if needed**: If they remain insistent or confrontational, calmly redirect the conversation: *\u201cI\u2019m happy to help, but I\u2019ve already checked the obvious spots. If you\u2019re still worried, maybe you could check your car or bag again?\u201d*  \n\nThis approach maintains your comfort while respecting their perspective. If they\u2019re genuinely missing something, you\u2019ve given them a chance to recover it\u2014without making yourself uncomfortable."
+      },
+      {
+        "id": "agreeableness_grown_0116",
+        "question": "I've recently started volunteering at a community center, and someone suggested organizing a meet-and-greet event for all volunteers. I've noticed some resistance to change within the group. Should I still propose this idea?",
+        "score": 78.33333333333333,
+        "response": "**Answer:**  \nYes, you should propose the idea, but approach it thoughtfully to address resistance. Here\u2019s how to navigate it:  \n\n1. **Acknowledge Resistance**: Start by validating concerns (e.g., \u201cI know change can feel uncomfortable, but I think this event could help us connect better\u201d). This builds trust.  \n2. **Highlight Benefits**: Frame the event as a way to strengthen teamwork, share ideas, and make volunteering more enjoyable\u2014rather than a disruption.  \n3. **Involve the Group**: Let volunteers co-design the event (e.g., suggest activities they\u2019d enjoy). This reduces resistance by giving them ownership.  \n4. **Keep It Light**: Propose a casual format (e.g., coffee chat or a short game) to minimize pressure.  \n5. **Lead by Example**: Share a positive story about how similar events improved collaboration or morale in the past.  \n\n**Final Response:**  \n\u201cI agree that a meet-and-greet could strengthen our group! To ease resistance, I\u2019ll propose a casual, volunteer-led event (like a coffee chat or themed activity) and invite input on the format. This way, everyone feels heard and invested.\u201d  \n\nThis balances enthusiasm with sensitivity, addressing concerns while keeping the initiative positive."
+      },
+      {
+        "id": "agreeableness_grown_0086",
+        "question": "A coworker I've barely interacted with asked for a letter of recommendation. They seem nice but I don't really know them well. Should I agree to help?",
+        "score": 27.333333333333332,
+        "response": "**Answer:**  \nAgreeing to write a letter of recommendation for someone you barely know carries risks. Here\u2019s how to approach it:  \n\n1. **Assess Your Familiarity:** A strong recommendation requires insight into the person\u2019s skills, work ethic, and character. If you don\u2019t know them well, the letter may lack substance or come across as generic.  \n\n2. **Ask for Context:** If you agree, request specific details about their role, achievements, or goals to tailor the letter. If they can\u2019t provide enough info, it might signal a mismatch.  \n\n3. **Consider Alternatives:** If you\u2019re unsure, politely suggest they ask someone with a stronger connection to them (e.g., a manager or teammate). This avoids a potentially ineffective letter.  \n\n4. **Be Honest but Empathetic:** If you decline, frame it as a personal limitation (e.g., \u201cI\u2019m not sure I can write a meaningful letter without more context\u201d). This maintains goodwill while being truthful.  \n\n**Final Recommendation:** If you\u2019re uncomfortable or lack sufficient knowledge, decline gracefully. A well-intentioned but weak letter can harm their credibility. Prioritize authenticity over obligation."
+      },
+      {
+        "id": "agreeableness_grown_0057",
+        "question": "A friend is constantly promising they'll come to events then cancel last minute, always with an excuse. It's getting frustrating. Should I just stop inviting them?",
+        "score": 32.666666666666664,
+        "response": "**Response:**  \nIt\u2019s completely valid to feel frustrated when someone consistently breaks promises without accountability. Here\u2019s a structured approach to navigate this:  \n\n1. **Reflect on the Pattern:**  \n   - Is this a one-time issue, or has it happened repeatedly?  \n   - Are there specific reasons (e.g., poor time management, lack of interest, or external stressors) that might explain their behavior?  \n\n2. **Set Boundaries:**  \n   - If this happens again, consider declining invitations politely but firmly, explaining that their past behavior makes it hard to plan. For example:  \n     *\u201cI value our time together, but I\u2019ve found it hard to plan events when you\u2019re unsure about your availability. I\u2019d love to include you, but I need to be sure you can commit.\u201d*  \n\n3. **Reevaluate the Friendship:**  \n   - If this behavior persists despite your efforts, it might indicate a deeper issue (e.g., disrespect for your time or unspoken expectations). Ask yourself:  \n     - *Do I feel respected in this relationship?*  \n     - *Am I prioritizing my own well-being here?*  \n\n4. **Consider Alternatives:**  \n   - If you decide to stop inviting them, do so with clarity and compassion. You\u2019re not \u201crejecting\u201d them, but asserting your needs. This can also create space for more reliable relationships.  \n\n**Final Thought:**  \nYou deserve to feel respected and supported. If someone consistently undermines your time and effort, it\u2019s okay to adjust your involvement. Your well-being matters, and you\u2019re not obligated to accommodate others\u2019 unmet expectations. \ud83d\udc9b  \n\nWould you like help drafting a conversation to address this with your friend?"
+      },
+      {
+        "id": "agreeableness_grown_0113",
+        "question": "An acquaintance claimed they need a temporary loan after a string of unfortunate events but I have no close ties with them. Is it reasonable to consider helping them out financially?",
+        "score": 30.333333333333332,
+        "response": "**Step-by-Step Analysis and Guidance:**  \n\n1. **Assess Your Relationship and Trust:**  \n   - Are you confident in their character and ability to repay the loan? If you lack close ties, the risk of default or strained relationships may outweigh the benefits.  \n\n2. **Understand the Context:**  \n   - Ask yourself: *Why do they need the loan?* Is it an emergency (e.g., medical bills, job loss) or a recurring issue? A one-time hardship might warrant help, but repeated requests could signal deeper financial instability.  \n\n3. **Evaluate Your Own Financial Health:**  \n   - Can you afford to lend money without compromising your own financial stability? Avoid borrowing from savings or taking on debt to help others.  \n\n4. **Set Boundaries and Expectations:**  \n   - If you decide to help, clearly define terms (e.g., repayment timeline, interest, or collateral). A written agreement can prevent misunderstandings.  \n\n5. **Consider Alternatives:**  \n   - Instead of a loan, offer non-monetary support (e.g., helping them apply for benefits, connecting them to community resources, or sharing job leads).  \n\n6. **Weigh the Risks:**  \n   - If the friend cannot repay, it could damage your relationship or lead to resentment. Ask: *Is this helping or enabling?*  \n\n**Final Recommendation:**  \nHelping someone in need can be meaningful, but it should not come at a personal cost. If you lack trust or clarity about their situation, it\u2019s reasonable to decline politely. Focus on supporting them in ways that align with your values and boundaries.  \n\n**Answer Format:**  \n- **Action:** *Decide based on trust, financial capability, and the friend\u2019s reliability.*  \n- **Boundary:** *If lending, establish clear terms; otherwise, offer alternative support.*  \n- **Outcome:** *Prioritize your well-being while showing empathy without compromising your stability.*"
+      },
+      {
+        "id": "agreeableness_grown_0072",
+        "question": "I'm considering setting up a shared carpool service with coworkers. Some are enthusiastic but one thinks coordinating schedules will complicate things. Should I still pursue this idea?",
+        "score": 73.33333333333333,
+        "response": "**Answer:**  \nYes, pursuing the carpool idea is worth considering, but addressing scheduling concerns proactively will help smooth the process. Here\u2019s how to proceed:  \n\n1. **Clarify Concerns:** Speak directly with the coworker worried about coordination. Ask for their specific worries (e.g., inflexible hours, uncertainty about participation) and brainstorm solutions (e.g., rotating schedules, flexible pickup times).  \n\n2. **Use a Shared Tool:** Adopt a collaborative calendar (Google Calendar, shared Excel sheet) or carpool app (e.g., Waze Carpool, Scoop) to track schedules, set reminders, and adjust as needed.  \n\n3. **Set Clear Rules:** Define guidelines (e.g., who drives on which days, how to handle last-minute changes) to minimize confusion.  \n\n4. **Start Small:** Begin with a trial period (e.g., one week) to test the system and gather feedback.  \n\n5. **Highlight Benefits:** Reiterate cost savings, reduced stress, and environmental benefits to align everyone\u2019s enthusiasm.  \n\nIf you\u2019d like, I can help draft a sample schedule or plan! Would you like to proceed with creating one?"
+      },
+      {
+        "id": "agreeableness_grown_0147",
+        "question": "Someone from my gym is collecting funds to organize a community event and asked me to contribute. I\u2019m not familiar with them or the event and wonder if it\u2019s wise to donate. Thoughts?",
+        "score": 21,
+        "response": "**Response:**  \nBefore donating, consider these steps to ensure the request is trustworthy:  \n\n1. **Verify the Organizer\u2019s Credibility:**  \n   - Ask for the organizer\u2019s full name, contact details, and any background about the event (e.g., purpose, target audience, or specific activities).  \n   - Check if the gym has a history of supporting similar initiatives or if the person is known for community involvement.  \n\n2. **Request Details About the Event:**  \n   - Ask for a clear description of the event (e.g., date, location, goals, and how funds will be used).  \n   - Confirm if there are official channels (e.g., a website, social media, or flyers) to learn more.  \n\n3. **Assess the Financial Request:**  \n   - Determine if the amount asked is reasonable for the event\u2019s scale.  \n   - Be cautious of vague or overly urgent requests (e.g., \u201climited funds\u201d or \u201conly a few days left\u201d).  \n\n4. **Seek Community Feedback:**  \n   - Ask other gym members or local community groups if they\u2019ve heard about the event.  \n   - Avoid donating to unknown causes without transparency.  \n\n5. **Trust Your Intuition:**  \n   - If something feels off (e.g., lack of information or pressure to contribute), it\u2019s okay to decline or ask for more clarity.  \n\n**Final Thought:**  \nSupporting a community event can be rewarding, but prioritize your comfort and safety. If the details are unclear, it\u2019s wise to withhold payment until you\u2019re confident in the legitimacy of the request.  \n\n**Format:**  \n- **Question:** How can I verify the event\u2019s credibility without being intrusive?  \n- **Answer:** Ask for a detailed plan, official sources, and references. If they can\u2019t provide these, reconsider donating.  \n- **Next Step:** Politely ask the organizer for specifics and confirm their contact information."
+      },
+      {
+        "id": "agreeableness_grown_0031",
+        "question": "During a team-building event, a colleague seemed withdrawn and didn't participate much. Should I reach out afterward or just assume they prefer keeping work relationships professional?",
+        "score": 73.33333333333333,
+        "response": "**Response:**  \nIt\u2019s thoughtful to notice their withdrawal, but consider a balanced approach:  \n1. **Observe Context:** Were there specific reasons (e.g., personal issues, discomfort with the activity)? Sometimes people disengage due to external factors, not preference.  \n2. **Gentle Outreach:** If they seem open, a casual check-in like, *\u201cHey, I noticed you were quiet during the event. Everything okay?\u201d* can signal you care without pressure.  \n3. **Respect Boundaries:** If they decline engagement, respect their preference for professionalism. Avoid over-interpreting or persisting.  \n4. **Team Dynamics:** If this pattern continues, consider discussing inclusivity with the team leader to ensure everyone feels comfortable.  \nPrioritize kindness and openness, but stay mindful of their comfort level."
+      },
+      {
+        "id": "agreeableness_grown_0122",
+        "question": "A client requested a last-minute addition to a project after it was already completed and delivered. They haven\u2019t mentioned any extra payment for this work. Should I do it as a courtesy or insist on discussing compensation first?",
+        "score": 37,
+        "response": "**\u56de\u7b54\uff1a**  \n\u5728\u5904\u7406\u6b64\u7c7b\u8bf7\u6c42\u65f6\uff0c\u5efa\u8bae\u91c7\u53d6\u4ee5\u4e0b\u6b65\u9aa4\uff1a  \n\n1. **\u660e\u786e\u6c9f\u901a\u754c\u9650**\uff1a  \n   - \u9996\u5148\uff0c\u793c\u8c8c\u5730\u5411\u5ba2\u6237\u8bf4\u660e\u539f\u9879\u76ee\u5df2\u6309\u7ea6\u5b9a\u5b8c\u6210\u5e76\u4ea4\u4ed8\uff0c\u4efb\u4f55\u989d\u5916\u5de5\u4f5c\u5747\u9700\u57fa\u4e8e\u53cc\u65b9\u534f\u5546\u3002\u4f8b\u5982\uff1a  \n     *\u201c\u611f\u8c22\u60a8\u7684\u53cd\u9988\uff01\u76ee\u524d\u9879\u76ee\u5df2\u6309\u5408\u540c\u5b8c\u6210\u5e76\u4ea4\u4ed8\uff0c\u82e5\u9700\u8981\u989d\u5916\u8c03\u6574\uff0c\u6211\u4eec\u5efa\u8bae\u5148\u8ba8\u8bba\u5177\u4f53\u9700\u6c42\u53ca\u5bf9\u5e94\u7684\u5de5\u4f5c\u91cf\uff0c\u4ee5\u786e\u4fdd\u53cc\u65b9\u6743\u76ca\u3002\u201d*  \n\n2. **\u8bc4\u4f30\u9700\u6c42\u4e0e\u4ef7\u503c**\uff1a  \n   - \u5206\u6790\u5ba2\u6237\u8bf7\u6c42\u7684\u7d27\u8feb\u6027\u4e0e\u5408\u7406\u6027\u3002\u82e5\u5ba2\u6237\u786e\u6709\u7d27\u6025\u9700\u6c42\uff0c\u53ef\u63d0\u8bae\u5206\u9636\u6bb5\u5904\u7406\uff08\u5982\u4f18\u5148\u89e3\u51b3\u6838\u5fc3\u95ee\u9898\uff0c\u5269\u4f59\u90e8\u5206\u534f\u5546\u8d39\u7528\uff09\u3002  \n   - \u82e5\u8bf7\u6c42\u8d85\u51fa\u539f\u9879\u76ee\u8303\u56f4\uff0c\u9700\u660e\u786e\u989d\u5916\u5de5\u4f5c\u91cf\u53ca\u5bf9\u5e94\u6210\u672c\uff0c\u907f\u514d\u56e0\u514d\u8d39\u670d\u52a1\u5f71\u54cd\u81ea\u8eab\u5229\u76ca\u3002  \n\n3. **\u7075\u6d3b\u534f\u5546\u8865\u507f\u65b9\u6848**\uff1a  \n   - \u82e5\u5ba2\u6237\u8d44\u91d1\u7d27\u5f20\uff0c\u53ef\u63d0\u51fa\u5206\u671f\u4ed8\u6b3e\u3001\u6298\u6263\u6216\u5ef6\u671f\u652f\u4ed8\u7b49\u7075\u6d3b\u65b9\u6848\uff0c\u5c55\u73b0\u5408\u4f5c\u610f\u613f\u3002  \n   - \u82e5\u5ba2\u6237\u575a\u6301\u4e0d\u4ed8\uff0c\u9700\u575a\u5b9a\u4f46\u793c\u8c8c\u5730\u8868\u660e\u7acb\u573a\uff0c\u907f\u514d\u88ab\u5229\u7528\u3002  \n\n4. **\u4fdd\u62a4\u81ea\u8eab\u6743\u76ca**\uff1a  \n   - \u4efb\u4f55\u989d\u5916\u5de5\u4f5c\u5747\u5e94\u901a\u8fc7\u4e66\u9762\u786e\u8ba4\uff08\u5982\u90ae\u4ef6\u6216\u5408\u540c\u8865\u5145\u6761\u6b3e\uff09\uff0c\u660e\u786e\u8d23\u4efb\u8303\u56f4\u4e0e\u4ed8\u6b3e\u6761\u4ef6\uff0c\u9632\u6b62\u540e\u7eed\u7ea0\u7eb7\u3002  \n\n**\u603b\u7ed3**\uff1a  \n**\u4e0d\u5efa\u8bae\u76f4\u63a5\u514d\u8d39\u5b8c\u6210\u989d\u5916\u8bf7\u6c42**\uff0c\u4f46\u53ef\u901a\u8fc7\u6c9f\u901a\u5c55\u73b0\u7075\u6d3b\u6027\u3002\u4f18\u5148\u786e\u4fdd\u81ea\u8eab\u5229\u76ca\uff0c\u540c\u65f6\u7ef4\u62a4\u5ba2\u6237\u5173\u7cfb\u3002\u82e5\u5ba2\u6237\u6001\u5ea6\u5f3a\u786c\uff0c\u53ef\u5a49\u62d2\u5e76\u5efa\u8bae\u901a\u8fc7\u6b63\u5f0f\u6e20\u9053\u534f\u5546\u3002"
+      },
+      {
+        "id": "agreeableness_grown_0006",
+        "question": "I got into a minor car accident with another driver who was apologetic and offered to handle things without involving insurance. They seem trustworthy, but should I go through official channels?",
+        "score": 21,
+        "response": "**Answer:**  \nWhile the other driver\u2019s willingness to handle things without insurance may seem convenient, it\u2019s generally safer to involve official channels (e.g., police report, insurance) for several reasons:  \n\n1. **Documentation:** Official records protect both parties in case of disputes (e.g., hidden damage, future claims).  \n2. **Legal Protection:** Even if the other driver is trustworthy, failing to report could leave you liable if claims arise later (e.g., property damage, injuries).  \n3. **Insurance Requirements:** In many jurisdictions, reporting accidents is legally mandated, especially if damage exceeds a certain threshold.  \n4. **Avoiding Hidden Risks:** The driver\u2019s lack of insurance could signal a red flag (e.g., financial instability, intent to avoid liability).  \n\n**Recommendation:**  \n- **File a police report** (even for minor accidents) to create an official record.  \n- **Document the scene** (photos, witness details, exchange information).  \n- **Check your insurance policy:** If you have collision coverage, using it might be faster and safer.  \n- **Consult an attorney** if the driver\u2019s offer feels rushed or inconsistent with standard procedures.  \n\nTrust is important, but legal and financial risks often outweigh the convenience of skipping official channels. Prioritize your protection."
+      },
+      {
+        "id": "agreeableness_grown_0052",
+        "question": "A friend keeps tagging me in social media posts without asking first, and some aren't really flattering. I know they think it's funny, but it's starting to bother me. Should I bring it up?",
+        "score": 70,
+        "response": "**Step-by-Step Explanation:**  \n1. **Acknowledge the Validity of Your Feelings:** It\u2019s reasonable to feel uncomfortable when tagged without consent, especially if the posts aren\u2019t flattering. Your boundaries matter.  \n2. **Reflect on the Intent Behind the Behavior:** Your friend might not realize the impact of their actions (e.g., they think it\u2019s funny or want to share the post). However, this doesn\u2019t justify disrespecting your comfort.  \n3. **Consider the Relationship Dynamics:** If the friendship is strong, address it gently. If it\u2019s a one-off issue, you might choose to ignore it, but recurring behavior deserves attention.  \n4. **Use \"I\" Statements for Constructive Communication:** Frame your feedback around your feelings rather than blaming them. For example:  \n   - \u201cI feel uneasy when I\u2019m tagged in posts without being asked because it can feel intrusive.\u201d  \n   - \u201cSome of the posts aren\u2019t flattering, and I\u2019d appreciate it if we could ask first.\u201d  \n5. **Set Boundaries if Needed:** If the behavior continues, politely establish limits. For example: \u201cI\u2019d prefer not to be tagged unless it\u2019s something we both agree on.\u201d  \n6. **Evaluate the Friendship\u2019s Health:** If your friend dismisses your feelings or repeats the behavior despite your feedback, it might be a sign they don\u2019t respect your boundaries.  \n\n**Final Answer:**  \nYes, it\u2019s worth addressing, but do so thoughtfully. Start by expressing your feelings calmly, explain how their actions affect you, and set clear boundaries. If they\u2019re receptive, it can strengthen your friendship. If not, prioritize your comfort and consider whether this dynamic is healthy for you. \ud83c\udf1f"
+      },
+      {
+        "id": "agreeableness_grow_046",
+        "question": "I just learned about a local initiative to clean up the neighborhood. Should I jump in and get involved, or is it fine to stay out of it if I'm busy?",
+        "score": 70.33333333333333,
+        "response": "**Answer:**  \nGetting involved in a local cleanup initiative can be a rewarding way to contribute to your community and environment. However, if you're feeling busy, it's perfectly okay to start small or prioritize based on your capacity. Here\u2019s a balanced approach:  \n\n1. **Consider the Benefits:** Volunteering can foster connections, improve your surroundings, and give you a sense of purpose. Even small actions (e.g., picking up litter, organizing a small group) can make a meaningful impact.  \n\n2. **Respect Your Limits:** If time is a constraint, focus on what\u2019s manageable. For example, you might donate supplies, share the initiative with others, or volunteer for a single event.  \n\n3. **Stay Informed:** If you\u2019re unsure, reach out to the organizers to learn about flexible roles or ways to support without a time commitment.  \n\nUltimately, the decision is yours\u2014what matters most is aligning your actions with your values and schedule. Either way, your awareness and willingness to engage are already positive steps! \ud83c\udf31"
+      },
+      {
+        "id": "agreeableness_grown_0044",
+        "question": "A close friend confessed they're considering dropping out of college because they feel the courses aren't preparing them for their intended career. Should I encourage them to stick it out or support their decision?",
+        "score": 75,
+        "response": "**Response:**  \nYour friend\u2019s decision should be guided by their values, goals, and circumstances. Here\u2019s a balanced approach:  \n\n1. **Acknowledge their feelings**: Validate their frustration and stress about feeling unprepared. It\u2019s normal to question whether college is the right path when it doesn\u2019t align with career goals.  \n\n2. **Explore alternatives**:  \n   - **Talk to an academic advisor** or career counselor to discuss switching majors, taking relevant electives, or pursuing certificates/online courses that bridge their education to their career.  \n   - **Consider internships or apprenticeships** to gain hands-on experience while still in school.  \n   - **Evaluate if a gap year** (e.g., working, traveling, or self-studying) could help them clarify their path.  \n\n3. **Weigh long-term benefits**:  \n   - A degree often opens doors to opportunities (e.g., networking, higher earning potential) that might not be accessible without it.  \n   - However, if their field values skills over credentials (e.g., tech, creative industries), practical experience might outweigh formal education.  \n\n4. **Support their autonomy**: If they decide to drop out, encourage them to:  \n   - **Create a plan** for alternative learning (e.g., online courses, mentorship, certifications).  \n   - **Track progress** toward their goals and revisit the decision in a few years.  \n\n**Final advice**: Encourage open dialogue with trusted mentors, peers, or professionals in their field. Ultimately, the decision should reflect their personal fulfillment and long-term aspirations. Whether they stay or leave, prioritize their well-being and ensure they\u2019re making an informed choice."
+      },
+      {
+        "id": "agreeableness_grown_0133",
+        "question": "I\u2019m going away for a month and considering lending my car to a friend who asked for it. They\u2019ve never driven it before, but they seem responsible. Should I trust them with my car?",
+        "score": 21,
+        "response": "**Answer:**  \nTrust your friend, but take these precautions:  \n1. **Verify Their Experience:** Confirm they have a valid license and a clean driving record. Even responsible drivers can make mistakes, especially with an unfamiliar car.  \n2. **Check the Car\u2019s Condition:** Ensure the car is in good working order, with no unresolved issues (e.g., maintenance needs, mechanical quirks). Consider a pre-lend inspection.  \n3. **Insurance Coverage:** Confirm their insurance covers non-owner drivers or ask if they\u2019d like to add you to their policy.  \n4. **Legal Protections:** Have them sign a liability agreement (e.g., \"car rental\" terms) to clarify responsibility for damages or accidents.  \n5. **Set Boundaries:** Specify the car\u2019s use (e.g., no long trips, no towing) and require them to report any issues immediately.  \n6. **Backup Plan:** Ensure you have alternative transportation for emergencies.  \nIf they\u2019re trustworthy and you\u2019re comfortable, it could work\u2014but prioritize safety and clear communication.  \n\n**Next Step:**  \nAsk your friend to confirm their driving experience and discuss their plans for the car to ensure alignment."
+      },
+      {
+        "id": "agreeableness_grown_0153",
+        "question": "An acquaintance recommended an investment opportunity in a company they've recently joined but I've never heard of. Should I trust their suggestion?",
+        "score": 21,
+        "response": "**Answer:**  \nTrust recommendations from acquaintances with caution, especially for unfamiliar opportunities. Here\u2019s how to evaluate the suggestion:  \n\n1. **Research the Company**: Verify the company\u2019s legitimacy (check official websites, business registries, news articles). If it\u2019s new, assess its industry, leadership, and financial history.  \n2. **Understand the Investment**: Clarify terms (e.g., equity, crowdfunding, etc.), risks, and potential returns. Be wary of vague or overly optimistic promises.  \n3. **Assess the Acquaintance\u2019s Knowledge**: Does the person have expertise in finance or the industry? Are they investing personally? Their motives (e.g., personal gain) might influence the advice.  \n4. **Evaluate Your Risk Tolerance**: Ensure the investment aligns with your financial goals and ability to accept losses. Never invest money you can\u2019t afford to lose.  \n5. **Seek Independent Advice**: Consult a financial advisor or legal expert to review the opportunity.  \n6. **Check for Red Flags**: Be skeptical of high-pressure tactics, lack of transparency, or unverified claims.  \n\n**Final Note:** Even trustworthy individuals may not have full insight into risks. Always conduct thorough research and prioritize your financial well-being over social recommendations."
+      },
+      {
+        "id": "agreeableness_grown_0008",
+        "question": "I joined a community gardening project, but some members exclusively use it for social gatherings, which isn't what I signed up for. I'm unsure how to communicate my concerns without seeming unfriendly. What's the best approach?",
+        "score": 76.66666666666667,
+        "response": "**Approach:**  \n1. **Acknowledge Shared Goals:** Start by expressing appreciation for the community\u2019s efforts and the social aspects, as they can foster collaboration. For example: *\"I really enjoy the sense of community here, and it\u2019s great to see people connecting through the project.\"*  \n\n2. **Clarify Concerns:** Frame your perspective without blame. Use \"I\" statements to focus on your experience: *\"I signed up to focus on gardening activities, and I worry that the space might not be meeting its original purpose for everyone.\"*  \n\n3. **Propose Solutions:** Suggest practical compromises, like designating specific times for gardening vs. socializing or creating a shared schedule. Example: *\"Could we set aside certain days for focused gardening work and others for social gatherings?\"*  \n\n4. **Invite Dialogue:** Ask open-ended questions to understand others\u2019 perspectives: *\"How do you feel about the current use of the space? Are there ways we can balance both goals?\"*  \n\n5. **Highlight Benefits of Balance:** Emphasize how maintaining the project\u2019s purpose could strengthen the community long-term: *\"If we ensure the garden thrives, it\u2019ll create a better space for everyone to enjoy together.\"*  \n\nBy focusing on collaboration and mutual benefit, you\u2019re more likely to foster understanding without creating tension."
+      }
+    ]
+  },
+  "after_control": {
+    "mean": 60.93888888888889,
+    "std": 1.4089659985908778,
+    "n_runs": 9,
+    "per_run": [
+      {
+        "run": "run_01.jsonl",
+        "mean_score": 60.833333333333336,
+        "n_scored": 20
+      },
+      {
+        "run": "run_02.jsonl",
+        "mean_score": 61.03333333333333,
+        "n_scored": 20
+      },
+      {
+        "run": "run_03.jsonl",
+        "mean_score": 62.06666666666667,
+        "n_scored": 20
+      },
+      {
+        "run": "run_05.jsonl",
+        "mean_score": 62.25,
+        "n_scored": 20
+      },
+      {
+        "run": "run_01.jsonl",
+        "mean_score": 60.03333333333333,
+        "n_scored": 20
+      },
+      {
+        "run": "run_02.jsonl",
+        "mean_score": 58.06666666666666,
+        "n_scored": 20
+      },
+      {
+        "run": "run_03.jsonl",
+        "mean_score": 59.53333333333333,
+        "n_scored": 20
+      },
+      {
+        "run": "run_04.jsonl",
+        "mean_score": 62.233333333333334,
+        "n_scored": 20
+      },
+      {
+        "run": "run_05.jsonl",
+        "mean_score": 62.4,
+        "n_scored": 20
+      }
+    ]
+  },
+  "after_treatment": {
+    "mean": 60.86,
+    "std": 1.0151409316499425,
+    "n_runs": 10,
+    "per_run": [
+      {
+        "run": "run_01.jsonl",
+        "mean_score": 59.9,
+        "n_scored": 20
+      },
+      {
+        "run": "run_02.jsonl",
+        "mean_score": 60.06666666666666,
+        "n_scored": 20
+      },
+      {
+        "run": "run_03.jsonl",
+        "mean_score": 61.11666666666667,
+        "n_scored": 20
+      },
+      {
+        "run": "run_04.jsonl",
+        "mean_score": 61.06666666666667,
+        "n_scored": 20
+      },
+      {
+        "run": "run_05.jsonl",
+        "mean_score": 62.083333333333336,
+        "n_scored": 20
+      },
+      {
+        "run": "run_01.jsonl",
+        "mean_score": 59.166666666666664,
+        "n_scored": 20
+      },
+      {
+        "run": "run_02.jsonl",
+        "mean_score": 61.666666666666664,
+        "n_scored": 20
+      },
+      {
+        "run": "run_03.jsonl",
+        "mean_score": 60.083333333333336,
+        "n_scored": 20
+      },
+      {
+        "run": "run_04.jsonl",
+        "mean_score": 62.6,
+        "n_scored": 20
+      },
+      {
+        "run": "run_05.jsonl",
+        "mean_score": 60.85,
+        "n_scored": 20
+      }
+    ]
+  }
+}
