@@ -54,6 +54,78 @@ contagion (heterogeneous across games).
 
 ---
 
+## Comparison to the original misalignment-contagion paper
+
+The original paper reports a stronger effect than we observe here: after thousands
+of prompt-elicited multi-agent games, default agents drift toward more anti-social
+traits on Anthropic Model-Written Evaluations, and the drift is amplified by
+maliciously prompted opponents. In other words, their headline result is
+**post-game trait/persona drift**, not just more defecting inside the game.
+
+Our current results separate those two phenomena. We do reproduce something that
+*looks* like contagion at the behavioral level: the neutral agent defects much more
+after exposure to a bad or defecting player. But our controls suggest that this is
+mostly **local strategic adaptation** rather than transmission of the bad agent's
+specific misaligned trait. The strongest evidence is that the scripted
+always-defect agent, which has no malicious persona or SFT trait, produces roughly
+the same neutral defection rate as the fine-tuned power-seeking agent.
+
+We do **not** reproduce the original paper's stronger post-game eval result in the
+current SFT setting. On both the free-form trait evals and the debiased Anthropic
+MC eval, the neutral's post-game power-seeking score does not reliably increase
+relative to control. The closest Anthropic MC signal is small and statistically
+fragile: treatment − control = +0.027 with 95% CI [−0.002, +0.056].
+
+So the clean comparison is:
+
+| Claim | Original paper | Our current result |
+|---|---|---|
+| Agents become more anti-social during/after social-dilemma gameplay | Yes | Yes in-game, especially in IPD |
+| Malicious/bad agents amplify the effect | Yes | Yes behaviorally, but always-defect does about as much |
+| The effect transfers to post-game Anthropic-style traits | Yes | Not detected |
+| Mechanism looks like persona/value drift | Yes / implied | More consistent with reciprocity or strategic adaptation |
+| Source of misalignment | Prompt-elicited personas | SFT checkpoints plus controls |
+
+This makes our result a **partial behavioral replication but not a trait-level
+replication** of the original paper.
+
+## Conclusions and hypotheses
+
+**Conclusion 1: We should distinguish behavioral contagion from trait contagion.**
+The neutral agent clearly changes what it does in the game, but we do not yet see
+evidence that it changes what it endorses outside the game. For our setup,
+"misalignment contagion" is currently better described as **context-bound
+retaliation/reciprocity** than as persistent misalignment transfer.
+
+**Conclusion 2: SFT misalignment may be less contagious than prompt-elicited
+misalignment.** A prompt-elicited malicious agent can explicitly advocate deceptive
+or anti-social norms in the transcript. A fine-tuned power-seeking agent may mostly
+reveal its trait through actions, not through contagious language. That could make
+SFT bad agents behaviorally harmful while producing weaker post-game persona drift
+in other agents.
+
+**Conclusion 3: The neutral model may be too small or too brittle to show durable
+trait update.** The original paper used larger, more capable instruction-tuned
+models and many more games. Our Qwen3-8B neutral responds to payoff pressure, but
+the sensitivity check suggests the post-game eval channel is weak: even blatant
+power/cooperation primes do not move the score cleanly.
+
+**Working hypothesis:** SFT bad agents create **strategic contamination** rather
+than **value contamination**. They change the game environment by defecting or
+breaking cooperative norms, which causes other agents to defect in response; but
+unless the bad agent also transmits an explicit persuasive/persona frame, that
+behavior does not generalize to Anthropic-style trait evaluations after the game.
+
+**Next hypothesis test:** Run the same Anthropic MC pre/post evals on (a) the SFT
+bad and good checkpoints themselves and (b) paper-faithful prompt-elicited
+Default/Benevolent/Malicious games. If prompt-elicited malicious agents reproduce
+post-game trait drift while SFT agents do not, then the paper's contagion effect
+may depend more on **linguistic persona transmission** than on exposure to a
+misaligned policy. If both show null under our setup, the likely explanation shifts
+toward model size, game scale, or eval sensitivity.
+
+---
+
 ## Caveats
 - Small n throughout (n=5–10 games per condition); IPD control floor is ~0.11 (not 0) —
   spontaneous cascades happen occasionally without a bad agent.
